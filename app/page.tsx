@@ -178,7 +178,7 @@ export default function Home() {
               ))}
             </Tabs>
 
-            {/* CTA */}
+            {/* CTA
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Button size="lg" asChild>
                 <Link
@@ -189,7 +189,7 @@ export default function Home() {
                   View on Stellar Community
                 </Link>
               </Button>
-            </div>
+            </div> */}
           </div>
         </div>
       </section>
