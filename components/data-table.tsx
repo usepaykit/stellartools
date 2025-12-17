@@ -30,6 +30,7 @@ import {
 import { MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MixinProps, splitProps } from "@/lib/mixin";
+import { MasterCard, Visa } from "@/components/icon";
 
 export interface TableAction<TData> {
   label: string;
@@ -97,6 +98,7 @@ export function DataTable<TData, TValue>({
             }}
             onClick={(e) => {
               e.stopPropagation();
+              e.currentTarget.focus();
             }}
             aria-label="Select row"
             className={cn("translate-y-[2px]", checkbox.className)}
