@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { toast } from "@/components/ui/toast";
+import { X } from "lucide-react";
 
 interface NavIconButtonProps {
   icon: React.ReactNode;
@@ -99,6 +101,15 @@ export default function DashboardHeader() {
             notificationCount={1}
             notificationColor="bg-blue-500"
             aria-label="Notifications"
+            onClick={() =>  toast.error("Notifications from stellar tools", {
+              id: "notifications",
+                cancel:{
+                label: <X  size={24}/>,
+                
+                onClick: ()=>{console.log('hello world')}
+              },
+              
+            })}
           />
 
           {/* Settings Icon */}
