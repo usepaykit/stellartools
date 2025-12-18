@@ -1,24 +1,6 @@
 "use client";
 
-import * as React from "react";
-import {
-  ColumnDef,
-  SortingState,
-  flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  RowSelectionState,
-} from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "./ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -27,10 +9,27 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { MoreHorizontal } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { MixinProps, splitProps } from "@/lib/mixin";
-import { MasterCard, Visa } from "@/components/icon";
+import { cn } from "@/lib/utils";
+import {
+  ColumnDef,
+  RowSelectionState,
+  SortingState,
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import { MoreHorizontal } from "lucide-react";
+import * as React from "react";
+import { Button } from "./ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 
 export interface TableAction<TData> {
   label: string;
