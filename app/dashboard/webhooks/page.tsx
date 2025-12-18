@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { DashboardSidebar } from '@/components/dashboard/dashboard-sidebar';
 import { DashboardSidebarInset } from '@/components/dashboard/app-sidebar-inset';
 import { DataTable, TableAction } from '@/components/data-table';
@@ -12,10 +13,18 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Link2,
+  Webhook,
   Info,
+  BarChart3,
+  TrendingUp,
+  Activity,
+  Clock,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LineChart } from "@/components/line-chart";
+import type { ChartConfig } from "@/components/ui/chart";
+import { WebHooksModal } from "@/components/webhook/webhooks-modal";
 
 // Webhook destination type definition
 type WebhookDestination = {
@@ -101,9 +110,36 @@ const StatusBadge = ({ status }: { status: WebhookDestination["status"] }) => {
   );
 };
 
-// Activity chart component (simple visualization)
+// Chart configurations
+const activityChartConfig: ChartConfig = {
+  value: {
+    label: "Activity",
+    color: "hsl(var(--chart-1))",
+  },
+};
+
+const responseTimeChartConfig: ChartConfig = {
+  value: {
+    label: "Response Time",
+    color: "hsl(var(--chart-1))",
+  },
+};
+
+// Transform data array to LineChart format
+const transformDataForChart = (data: number[] | undefined) => {
+  if (!data || data.length === 0) return null;
+  
+  return data.map((value, index) => ({
+    index: index.toString(),
+    value,
+  }));
+};
+
+// Activity chart component using LineChart
 const ActivityChart = ({ data }: { data?: number[] }) => {
-  if (!data || data.length === 0) {
+  const chartData = transformDataForChart(data);
+  
+  if (!chartData) {
     return (
       <div className="flex items-center gap-2 text-muted-foreground">
         <Info className="h-4 w-4" />
@@ -112,23 +148,47 @@ const ActivityChart = ({ data }: { data?: number[] }) => {
     );
   }
 
-  const maxValue = Math.max(...data);
-  const minValue = Math.min(...data);
-  const range = maxValue - minValue || 1;
+  return (
+    <div className="w-24 h-12 flex items-center justify-center">
+      <LineChart
+        data={chartData}
+        config={activityChartConfig}
+        xAxisKey="index"
+        activeKey="value"
+        color="var(--chart-1)"
+        showTooltip={false}
+        showXAxis={false}
+        className="h-12"
+      />
+    </div>
+  );
+};
+
+// Response time chart component using LineChart
+const ResponseTimeChart = ({ data }: { data?: number[] }) => {
+  const chartData = transformDataForChart(data);
+  
+  if (!chartData) {
+    return (
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Info className="h-4 w-4" />
+        <span className="text-sm">This data is unavailable</span>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex items-center gap-0.5 h-6 w-20">
-      {data.map((value, index) => {
-        const height = ((value - minValue) / range) * 100;
-        return (
-          <div
-            key={index}
-            className="flex-1 bg-primary rounded-sm"
-            style={{ height: `${Math.max(height, 10)}%` }}
-            aria-hidden="true"
-          />
-        );
-      })}
+    <div className="w-24 h-12 flex items-center justify-center">
+      <LineChart
+        data={chartData}
+        config={responseTimeChartConfig}
+        xAxisKey="index"
+        activeKey="value"
+        color="var(--chart-1)"
+        showTooltip={false}
+        showXAxis={false}
+        className="h-12"
+      />
     </div>
   );
 };
@@ -140,7 +200,8 @@ const columns: ColumnDef<WebhookDestination>[] = [
     header: "Type",
     cell: () => (
       <div className="flex items-center">
-        <Link2 className="h-4 w-4 text-muted-foreground" />
+        <Webhook className="h-4 w-4 text-muted-foreground" />
+
       </div>
     ),
     enableSorting: false,
@@ -213,13 +274,21 @@ const columns: ColumnDef<WebhookDestination>[] = [
   {
     accessorKey: "activity",
     header: "Activity",
-    cell: ({ row }) => <ActivityChart data={row.original.activity} />,
+    cell: ({ row }) => (
+      <div className="flex items-center justify-center">
+        <ActivityChart data={row.original.activity} />
+      </div>
+    ),
     enableSorting: false,
   },
   {
     accessorKey: "responseTime",
     header: "Response time",
-    cell: ({ row }) => <ActivityChart data={row.original.responseTime} />,
+    cell: ({ row }) => (
+      <div className="flex items-center justify-center">
+        <ResponseTimeChart data={row.original.responseTime} />
+      </div>
+    ),
     enableSorting: false,
   },
   {
@@ -235,6 +304,8 @@ const columns: ColumnDef<WebhookDestination>[] = [
 ];
 
 export default function WebhooksPage() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   // Table actions
   const tableActions: TableAction<WebhookDestination>[] = [
     {
@@ -275,7 +346,7 @@ export default function WebhooksPage() {
                     Send events from Stellar to webhook endpoints and cloud services.
                   </p>
                 </div>
-                <Button className="gap-2">
+                <Button className="gap-2" onClick={() => setIsModalOpen(true)}>
                   <Plus className="h-4 w-4" />
                   <span className="hidden sm:inline">Add destination</span>
                   <span className="sm:hidden">Add</span>
@@ -283,17 +354,73 @@ export default function WebhooksPage() {
               </div>
 
               {/* Tabs */}
-              <Tabs defaultValue="overview" className="w-full shadow-none">
+              <Tabs defaultValue="webhooks" className="w-full shadow-none">
                 <TabsList >
                   <TabsTrigger value="overview" className='data-[state=active]:shadow-none'>Overview</TabsTrigger>
                   <TabsTrigger value="webhooks" className='data-[state=active]:shadow-none'>Webhooks</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="mt-6">
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground">
-                      Overview content will be displayed here.
-                    </p>
+                  <div className="flex flex-col items-center justify-center min-h-[500px] py-16 px-4">
+                    {/* Animated Icon Container */}
+                    <div className="relative mb-8">
+                      <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl animate-pulse" />
+                      <div className="relative flex items-center justify-center w-24 h-24 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
+                        <BarChart3 className="w-12 h-12 text-primary" />
+                      </div>
+                      <div className="absolute -top-2 -right-2">
+                        <Sparkles className="w-6 h-6 text-primary animate-pulse" />
+                      </div>
+                    </div>
+
+                    {/* Main Content */}
+                    <div className="text-center max-w-2xl space-y-4">
+                      <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                        Webhook Overview
+                      </h2>
+                      <p className="text-sm text-muted-foreground/80 max-w-md mx-auto">
+                        We&apos;re building a comprehensive overview dashboard that will give you insights into your webhook performance, analytics, and real-time monitoring.
+                      </p>
+                    </div>
+
+                    {/* Feature Preview Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-12 w-full max-w-4xl">
+                      <div className="group relative p-6 rounded-lg border bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-all duration-300 hover:border-primary/20">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                            <Activity className="w-5 h-5 text-primary" />
+                          </div>
+                          <h3 className="font-semibold text-sm">Real-time Monitoring</h3>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Track webhook events and responses in real-time
+                        </p>
+                      </div>
+
+                      <div className="group relative p-6 rounded-lg border bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-all duration-300 hover:border-primary/20 ">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                            <TrendingUp className="w-5 h-5 text-primary" />
+                          </div>
+                          <h3 className="font-semibold text-sm">Analytics & Insights</h3>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Detailed analytics and performance metrics
+                        </p>
+                      </div>
+
+                      <div className="group relative p-6 rounded-lg border bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-all duration-300 hover:border-primary/20">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                            <Clock className="w-5 h-5 text-primary" />
+                          </div>
+                          <h3 className="font-semibold text-sm">Historical Data</h3>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          View past events and historical trends
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </TabsContent>
 
@@ -310,6 +437,7 @@ export default function WebhooksPage() {
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
+      <WebHooksModal open={isModalOpen} onOpenChange={setIsModalOpen} />
     </div>
   );
 }
