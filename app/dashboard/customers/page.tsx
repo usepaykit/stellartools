@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
+import { truncate } from "@/lib/utils";
 // Customer type definition
 type Customer = {
   id: string
@@ -25,15 +25,6 @@ type Customer = {
   createdAt: Date
 }
 
-// Utility function to truncate wallet address
-const truncateWalletAddress = (address: string, startLength: number = 6, endLength: number = 4): string => {
-  if (address.length <= startLength + endLength) {
-    return address
-  }
-  return `${address.slice(0, startLength)}...${address.slice(-endLength)}`
-}
-
-// Mock data - replace with actual data fetching
 const mockCustomers: Customer[] = [
   {
     id: "1",
@@ -84,8 +75,9 @@ const columns: ColumnDef<Customer>[] = [
     header: ({ column }) => {
       const isSorted = column.getIsSorted()
       return (
-        <button
+        <Button
           className="flex items-center gap-2 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1 -mx-1"
+          variant={'ghost'}
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           aria-label={`Sort by name ${isSorted === "asc" ? "descending" : "ascending"}`}
         >
@@ -97,7 +89,7 @@ const columns: ColumnDef<Customer>[] = [
           ) : (
             <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden="true" />
           )}
-        </button>
+        </Button>
       )
     },
     cell: ({ row }) => (
@@ -110,9 +102,10 @@ const columns: ColumnDef<Customer>[] = [
     header: ({ column }) => {
       const isSorted = column.getIsSorted()
       return (
-        <button
+        <Button
           className="flex items-center gap-2 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1 -mx-1"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          variant={'ghost'}
           aria-label={`Sort by email ${isSorted === "asc" ? "descending" : "ascending"}`}
         >
           <span>Email</span>
@@ -123,7 +116,7 @@ const columns: ColumnDef<Customer>[] = [
           ) : (
             <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden="true" />
           )}
-        </button>
+        </Button>
       )
     },
     cell: ({ row }) => (
@@ -143,9 +136,10 @@ const columns: ColumnDef<Customer>[] = [
     header: ({ column }) => {
       const isSorted = column.getIsSorted()
       return (
-        <button
+        <Button
           className="flex items-center gap-2 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1 -mx-1"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          variant={'ghost'}
           aria-label={`Sort by wallet address ${isSorted === "asc" ? "descending" : "ascending"}`}
         >
           <span>Wallet Address</span>
@@ -156,12 +150,12 @@ const columns: ColumnDef<Customer>[] = [
           ) : (
             <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden="true" />
           )}
-        </button>
+        </Button>
       )
     },
     cell: ({ row }) => (
       <div className="text-muted-foreground font-mono text-sm">
-        {truncateWalletAddress(row.original.walletAddress)}
+        {truncate(row.original.walletAddress)}
       </div>
     ),
     enableSorting: true,
@@ -171,9 +165,10 @@ const columns: ColumnDef<Customer>[] = [
     header: ({ column }) => {
       const isSorted = column.getIsSorted()
       return (
-        <button
+        <Button
           className="flex items-center gap-2 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1 -mx-1"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          variant="ghost"
           aria-label={`Sort by created date ${isSorted === "asc" ? "descending" : "ascending"}`}
         >
           <span>Created</span>
@@ -184,7 +179,7 @@ const columns: ColumnDef<Customer>[] = [
           ) : (
             <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden="true" />
           )}
-        </button>
+        </Button>
       )
     },
     cell: ({ row }) => {
@@ -208,17 +203,18 @@ const columns: ColumnDef<Customer>[] = [
   },
 ]
 
-// Filter options
-const filterOptions = [
-  "All",
-  "First-time customers",
- 
-  "Recent customers",
+// Filter mapping
+const filterMap: Record<number, string> = {
+  0: "All",
+  1: "First-time customers",
+  2: "Recent customers",
+}
 
-]
+// Filter options (numeric indices)
+const filterOptions = [0, 1, 2]
 
 export default function CustomersPage() {
-  const [selectedFilter, setSelectedFilter] = useState("All")
+  const [selectedFilter, setSelectedFilter] = useState<number>(0)
   const router = useRouter()
 
   // Handle row click to navigate to customer detail page
@@ -262,19 +258,19 @@ export default function CustomersPage() {
 
               {/* Filter Pills */}
               <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                {filterOptions.map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setSelectedFilter(filter)}
+                {filterOptions.map((filterIndex) => (
+                  <Button
+                    key={filterIndex}
+                    onClick={() => setSelectedFilter(filterIndex)}
                     className={cn(
                       "px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap",
-                      selectedFilter === filter
+                      selectedFilter === filterIndex
                         ? "bg-primary text-primary-foreground"
                         : "bg-muted text-muted-foreground hover:bg-muted/80"
                     )}
                   >
-                    {filter}
-                  </button>
+                    {filterMap[filterIndex]}
+                  </Button>
                 ))}
               </div>
 
