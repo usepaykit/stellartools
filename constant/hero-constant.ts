@@ -47,7 +47,24 @@ export const auth = betterAuth({
 
 export default auth;`;
 
+const UploadThingCodeSample = `
+import { withStellarBilling } from "@stellartools/uploadthing"
 
+export const uploadRouter = {
+  paidUpload: withStellarBilling({
+    pricePerUpload: 0.2,
+    currency: "XLM",
+  })(
+    f({ image: { maxFileSize: "8MB" } })
+      .middleware(async ({ req }) => {
+        return { userId: req.user.id }
+      })
+      .onUploadComplete(async ({ file }) => {
+        // normal logic
+      })
+  )
+}
+`
 
 export const Heroproviders = [
   {
@@ -58,17 +75,31 @@ export const Heroproviders = [
     code: betterAuthCodeSample,
   },
   {
+    id: "uploadthing",
+    name: "UploadThing",
+    logo: "/images/integrations/uploadthing.png",
+    filename: "uploadthing.ts",
+    code: UploadThingCodeSample,
+  },
+  {
     id: "medusa",
     name: "Medusa",
     logo: "/images/integrations/medusa.jpeg",
     filename: "medusa-config.ts",
     code: medusaJSCodeSample,
   },
-  {
-    id: "shopify",
-    name: "Shopify",
-    logo: "/images/integrations/shopify.png",
-    filename: "app.ts",
-    code: shopifyCodeSample,
-  },
+    {
+      id: "shopify",
+      name: "Shopify",
+      logo: "/images/integrations/shopify.png",
+      filename: "app.ts",
+      code: shopifyCodeSample,
+    },
+    {
+      id: "uploadthing",
+      name: "UploadThing",
+      logo: "/images/integrations/uploadthing.png",
+      filename: "uploadthing.ts",
+      code: UploadThingCodeSample,
+    },
 ];
