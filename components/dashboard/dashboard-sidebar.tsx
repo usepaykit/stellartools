@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
 import {
   AudioWaveform,
   BadgeCheck,
@@ -23,6 +24,7 @@ import {
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 
 import {
   Collapsible,
@@ -134,6 +136,14 @@ const data = {
 
 export function DashboardSidebar({ children }: { children: React.ReactNode }) {
   const [activeTeam, setActiveTeam] = React.useState(data.teams[0]);
+  const pathname = usePathname();
+
+  const isActive = (url: string) => {
+    if (url === "/dashboard") {
+      return pathname === "/dashboard";
+    }
+    return pathname.startsWith(url);
+  };
 
   return (
     <SidebarProvider>
@@ -201,33 +211,80 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
           <SidebarGroup>
             <SidebarMenu>
               {data.navMain.map((item) => {
+                const itemActive = isActive(item.url);
                 if (item.items && item.items.length > 0) {
+                  const hasActiveSubItem = item.items.some((subItem) =>
+                    isActive(subItem.url)
+                  );
                   return (
                     <Collapsible
                       key={item.title}
                       asChild
-                      defaultOpen={false}
+                      defaultOpen={hasActiveSubItem}
                       className="group/collapsible"
                     >
                       <SidebarMenuItem>
                         <CollapsibleTrigger asChild>
-                          <SidebarMenuButton tooltip={item.title}>
-                            {item.icon && <item.icon />}
-                            <span>{item.title}</span>
+                          <SidebarMenuButton
+                            tooltip={item.title}
+                            isActive={itemActive || hasActiveSubItem}
+                            className={cn(
+                              itemActive || hasActiveSubItem
+                                ? "text-primary bg-transparent hover:bg-sidebar-accent data-[active=true]:bg-transparent data-[active=true]:text-primary"
+                                : ""
+                            )}
+                          >
+                            {item.icon && (
+                              <item.icon
+                                className={cn(
+                                  itemActive || hasActiveSubItem
+                                    ? "text-primary"
+                                    : ""
+                                )}
+                              />
+                            )}
+                            <span
+                              className={cn(
+                                itemActive || hasActiveSubItem
+                                  ? "text-primary font-medium"
+                                  : ""
+                              )}
+                            >
+                              {item.title}
+                            </span>
                             <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                           </SidebarMenuButton>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           <SidebarMenuSub>
-                            {item.items.map((subItem) => (
-                              <SidebarMenuSubItem key={subItem.title}>
-                                <SidebarMenuSubButton asChild>
-                                  <a href={subItem.url}>
-                                    <span>{subItem.title}</span>
-                                  </a>
-                                </SidebarMenuSubButton>
-                              </SidebarMenuSubItem>
-                            ))}
+                            {item.items.map((subItem) => {
+                              const subItemActive = isActive(subItem.url);
+                              return (
+                                <SidebarMenuSubItem key={subItem.title}>
+                                  <SidebarMenuSubButton
+                                    asChild
+                                    isActive={subItemActive}
+                                    className={cn(
+                                      subItemActive
+                                        ? "text-primary bg-transparent hover:bg-sidebar-accent data-[active=true]:bg-transparent data-[active=true]:text-primary"
+                                        : ""
+                                    )}
+                                  >
+                                    <a href={subItem.url}>
+                                      <span
+                                        className={cn(
+                                          subItemActive
+                                            ? "text-primary font-medium"
+                                            : ""
+                                        )}
+                                      >
+                                        {subItem.title}
+                                      </span>
+                                    </a>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              );
+                            })}
                           </SidebarMenuSub>
                         </CollapsibleContent>
                       </SidebarMenuItem>
@@ -236,10 +293,24 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                 }
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild tooltip={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={item.title}
+                      isActive={itemActive}
+                    >
                       <a href={item.url}>
-                        {item.icon && <item.icon />}
-                        <span>{item.title}</span>
+                        {item.icon && (
+                          <item.icon
+                            className={cn(itemActive ? "text-primary" : "")}
+                          />
+                        )}
+                        <span
+                          className={cn(
+                            itemActive ? "text-primary font-medium" : ""
+                          )}
+                        >
+                          {item.title}
+                        </span>
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
