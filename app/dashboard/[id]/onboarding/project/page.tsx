@@ -23,8 +23,8 @@ export default function OnboardingProject() {
 
     // const logoSrc = resolvedTheme === 'dark' ? '/images/logo-light.png' : '/images/logo-dark.png';
 
-    const [productName, setProductName] = useState('');
-    const [productDescription, setProductDescription] = useState('');
+    const [projectName, setProjectName] = useState('');
+    const [projectDescription, setProjectDescription] = useState('');
 
     const [billingCycle, setBillingCycle] = useState<'one-time' | 'recurring'>('recurring');
     const [recurringInterval, setRecurringInterval] = useState('1');
@@ -36,13 +36,13 @@ export default function OnboardingProject() {
     const [imagePreviews, setImagePreviews] = useState<{ url: string; file: File }[]>([]);
 
     const handleSetup = () => {
-        if (!productName.trim()) {
-            alert('Please enter a product name.');
+        if (!projectName.trim()) {
+            alert('Please enter a project name.');
             return;
         }
-        console.log('Product setup:', {
-            name: productName,
-            description: productDescription,
+        console.log('Project setup:', {
+            name: projectName,
+            description: projectDescription,
             billingCycle,
             recurringInterval,
             recurringPeriod,
@@ -115,11 +115,11 @@ export default function OnboardingProject() {
                 )}
 
                 <h1 className="text-3xl font-normal tracking-tight mb-2 text-foreground text-center">
-                    Your first product
+                    Your first project
                 </h1>
 
                 <p className="text-muted-foreground text-base mb-8 text-center">
-                    Setup your first digital product to get started.
+                    Setup your first digital project to get started.
                 </p>
 
                 <div className="w-full space-y-6">
@@ -127,29 +127,29 @@ export default function OnboardingProject() {
                         <CardContent className="space-y-5 pt-6">
                             <div className="space-y-2">
                                 <h2 className="text-lg font-normal text-foreground">
-                                    Product Information
+                                    Project Information
                                 </h2>
                                 <p className="text-sm text-muted-foreground">
-                                    Basic product information which helps identify the product
+                                    Basic project information which helps identify the project
                                 </p>
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="productName">
+                                <Label htmlFor="projectName">
                                     Name
                                 </Label>
                                 <Input
-                                    id="productName"
+                                    id="projectName"
                                     type="text"
-                                    value={productName}
-                                    onChange={(e) => setProductName(e.target.value)}
-                                    placeholder="Enter product name"
+                                    value={projectName}
+                                    onChange={(e) => setProjectName(e.target.value)}
+                                    placeholder="Enter project name"
                                 />
                             </div>
 
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <Label htmlFor="productDescription">
+                                    <Label htmlFor="projectDescription">
                                         Description
                                     </Label>
                                     <span className="text-xs text-muted-foreground">
@@ -157,10 +157,10 @@ export default function OnboardingProject() {
                                     </span>
                                 </div>
                                 <Textarea
-                                    id="productDescription"
-                                    value={productDescription}
-                                    onChange={(e) => setProductDescription(e.target.value)}
-                                    placeholder="Enter product description"
+                                    id="projectDescription"
+                                    value={projectDescription}
+                                    onChange={(e) => setProjectDescription(e.target.value)}
+                                    placeholder="Enter project description"
                                     className="min-h-[120px]"
                                 />
                             </div>
@@ -175,7 +175,7 @@ export default function OnboardingProject() {
                                     Media
                                 </h2>
                                 <p className="text-sm text-muted-foreground">
-                                    Enhance the product page with medias, giving the customers a better idea of the product
+                                    Enhance the project page with medias, giving the customers a better idea of the project
                                 </p>
                             </div>
 
@@ -219,7 +219,7 @@ export default function OnboardingProject() {
                                         <div className="border-2 border-dashed border-input rounded-lg p-12 flex flex-col items-center justify-center text-center hover:bg-accent/50 transition-colors">
                                             <ImagePlus className="w-12 h-12 text-muted-foreground mb-4" />
                                             <p className="text-sm font-medium text-foreground mb-1">
-                                                Add product media
+                                                Add project media
                                             </p>
                                             <p className="text-xs text-muted-foreground">
                                                 Up to 10MB each. 16:9 ratio recommended for optimal display.
@@ -231,124 +231,7 @@ export default function OnboardingProject() {
                         </CardContent>
                     </Card>
 
-                    {/* Pricing Section */}
-                    <Card>
-                        <CardContent className="space-y-5 pt-6">
-                            <div className="space-y-2">
-                                <h2 className="text-lg font-normal text-foreground">
-                                    Pricing
-                                </h2>
-                                <p className="text-sm text-muted-foreground">
-                                    Set your billing cycle and pricing model
-                                </p>
-                            </div>
-
-                            {/* Billing Cycle */}
-                            <div className="space-y-3">
-                                <div className="flex items-center space-x-2">
-                                    <input
-                                        type="radio"
-                                        id="one-time"
-                                        name="billingCycle"
-                                        value="one-time"
-                                        checked={billingCycle === 'one-time'}
-                                        onChange={(e) => setBillingCycle(e.target.value as 'one-time' | 'recurring')}
-                                        className="w-4 h-4 text-primary border-input focus:ring-primary focus:ring-2"
-                                    />
-                                    <Label htmlFor="one-time" className="font-normal cursor-pointer">
-                                        One-time purchase
-                                    </Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <input
-                                        type="radio"
-                                        id="recurring"
-                                        name="billingCycle"
-                                        value="recurring"
-                                        checked={billingCycle === 'recurring'}
-                                        onChange={(e) => setBillingCycle(e.target.value as 'one-time' | 'recurring')}
-                                        className="w-4 h-4 text-primary border-input focus:ring-primary focus:ring-2"
-                                    />
-                                    <Label htmlFor="recurring" className="font-normal cursor-pointer">
-                                        Recurring subscription
-                                    </Label>
-                                </div>
-                            </div>
-
-                            {/* Recurring Subscription Details */}
-                            {billingCycle === 'recurring' && (
-                                <div className="flex items-center gap-2 pl-6">
-                                    <span className="text-sm text-foreground">Every</span>
-                                    <Input
-                                        type="number"
-                                        value={recurringInterval}
-                                        onChange={(e) => setRecurringInterval(e.target.value)}
-                                        className="w-20"
-                                        min="1"
-                                    />
-                                    <select
-                                        value={recurringPeriod}
-                                        onChange={(e) => setRecurringPeriod(e.target.value)}
-                                        className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                        <option value="day">day</option>
-                                        <option value="week">week</option>
-                                        <option value="month">month</option>
-                                        <option value="year">year</option>
-                                    </select>
-                                </div>
-                            )}
-
-                            {/* Pricing Model */}
-                            <div className="space-y-2">
-                                <Label htmlFor="pricingModel">
-                                    Pricing Model
-                                </Label>
-                                <select
-                                    id="pricingModel"
-                                    value={pricingModel}
-                                    onChange={(e) => setPricingModel(e.target.value)}
-                                    className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    <option value="fixed">Fixed price</option>
-                                    <option value="tiered">Tiered pricing</option>
-                                    <option value="usage">Usage-based</option>
-                                </select>
-                            </div>
-
-                            {/* Price Input */}
-                            <div className="space-y-2">
-                                <Label htmlFor="price">
-                                    Price
-                                </Label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                                    <Input
-                                        id="price"
-                                        type="text"
-                                        value={price}
-                                        onChange={(e) => setPrice(e.target.value)}
-                                        className="pl-7"
-                                        placeholder="0.00"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Add Additional Price Button */}
-                            <Button
-                                type="button"
-                                variant="outline"
-                                className="w-full"
-                                onClick={() => {
-                                    // Handle adding additional price
-                                    console.log('Add additional price');
-                                }}
-                            >
-                                Add Additional Price
-                            </Button>
-                        </CardContent>
-                    </Card>
-
+      
                     {/* Action Buttons */}
                     <div className="flex gap-4">
                         <Button
