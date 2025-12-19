@@ -1,200 +1,365 @@
-"use client"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Separator } from "@/components/ui/separator"
-import { User, Mail, Phone, EyeOff, Eye, Loader2 } from "lucide-react"
-import { register } from "module"
-import { useState } from "react"
-import { Label } from "@/components/ui/label"
+"use client";
+
+import React from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Google } from "@/components/icon";
+import { TextField } from "@/components/input-picker";
+import { toast } from "@/components/ui/toast";
+import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
+import Link from "next/link";
+import Image from "next/image";
+
+const signInSchema = z.object({
+  email: z.email()
+    .toLowerCase()
+    .trim(),
+  password: z
+    .string()
+    .min(1, "Password is required")
+    .min(8, "Password must be at least 8 characters"),
+  rememberMe: z.boolean(),
+});
+
+type SignInFormData = z.infer<typeof signInSchema>;
 
 
+export default function SignIn() {
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-const Signin = () =>
-{
-  const [showPassword, setShowPassword] = useState('')
+  const form = useForm<SignInFormData>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      rememberMe: false,
+    },
+    mode: "onBlur",
+  });
+
+  const onSubmit = async (data: SignInFormData) => {
+    setIsSubmitting(true);
+
+    try {
+
+
+      console.log("Sign-in attempt:", {
+        email: data.email,
+        rememberMe: data.rememberMe,
+        timestamp: new Date().toISOString(),
+      });
+      toast.success("Signed in successfully");
+
+    } catch (error) {
+      console.error("Sign-in error:", error);
+      toast.error("Sign-in failed", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "Invalid email or password. Please try again.",
+      } as Parameters<typeof toast.error>[1]);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+
+  const handleGoogleSignIn = async () => {
+    try {
+      console.log("Google sign-in initiated");
+      toast.info("Google sign-in", {
+        description: "Redirecting to Google authentication...",
+      } as Parameters<typeof toast.info>[1]);
+    } catch (error) {
+      console.error("Google sign-in error:", error);
+      toast.error("Google sign-in failed");
+    }
+  };
 
   return (
-    <div> 
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
-      {/* Left Animated Section */}
-      <div className="relative hidden lg:block bg-black">
-        {/* Crossfade images using AnimatePresence + motion.div */}
+      <div className="relative hidden lg:flex bg-black overflow-hidden">
+        {/* Sophisticated gradient mesh background */}
         <div className="absolute inset-0">
-          
+          <div className="absolute inset-0 bg-linear-to-br from-black via-gray-950 to-black" />
+          <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-primary/5 blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-1/2 h-1/2 bg-primary/3 blur-3xl" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(120,119,198,0.1),transparent_50%)]" />
         </div>
 
-        {/* Overlay gradient */}
-        <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-transparent" />
+        {/* Content Container with refined spacing */}
+        <div className="relative z-10 flex flex-col justify-between w-full p-16">
+          {/* Top Section */}
+          <div className="space-y-10">
+            {/* Logo Section - Premium presentation */}
+            <div className="space-y-6">
+              <div className="relative inline-block">
+                {/* Subtle glow - not overpowering */}
+                <div className="absolute -inset-4 rounded-2xl bg-primary/5 blur-2xl opacity-50 " />
+                  <Image
+                    src="/images/logo-dark.png"
+                    alt="Stellar Tools"
+                    width={150}
+                    height={1}
+                    className="object-contain p-5"
+                    priority
+                  />
+            
+              </div>
 
-        {/* Top text */}
-        <div className="absolute top-1/4 left-10 text-white space-y-4 drop-shadow-lg">
-          <h2 className="text-4xl  font-bold tracking-tight">
-            Stella Tools
-          </h2>
-          <p className="text-lg opacity-90">
-            Lorem ipsum, dolor sit amet consectetur adipisicing elit. Totam?
-          </p>
-        </div>
+              {/* Typography with refined hierarchy */}
+              <div className="space-y-3">
+                <h1 className="text-6xl font-bold tracking-[-0.02em] text-white leading-[1.1]">
+                  Stellar Tools
+                </h1>
+                <div className="h-px w-16 bg-linear-to-r from-primary/50 to-transparent" />
+              </div>
+            </div>
 
-        {/* Bottom text box */}
-        <div
-          className="absolute bottom-10 left-10 right-10 bg-white/10 backdrop-blur-md 
-          rounded-2xl border border-white/20 p-6 text-white shadow-lg"
-        >
-          <h3 className="text-xl font-semibold mb-1">
-           Lorem ipsum dolor sit amet.
-          </h3>
-          <p className="text-sm text-white/90">
-           Lorem ipsum dolor sit amet consectetur adipisicing elit. Illum exercitationem rem accusamus commodi, itaque consectetur possimus doloribus? Excepturi molestiae fugiat maiores eum fuga obcaecati, quas, autem, animi doloribus dolorem aspernatur.
-          </p>
+            {/* Value Proposition - Concise and impactful */}
+            <div className="space-y-6 max-w-lg">
+              <p className="text-lg text-white/80 leading-relaxed font-light tracking-wide">
+                The cloud platform for managing Stellar payment SDKs. 
+                Centralized control with enterprise reliability.
+              </p>
+
+              {/* Feature highlights - Minimal and elegant */}
+              <div className="flex flex-col gap-4 pt-2">
+                <div className="flex items-start gap-4 group">
+                 
+                  <div>
+                    <h4 className="text-sm font-semibold text-white mb-1">Cloud-Native</h4>
+                    <p className="text-sm text-white/60 leading-relaxed">
+                      Unified dashboard to deploy, monitor, and scale—zero infrastructure overhead.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 group">
+               
+                  <div>
+                    <h4 className="text-sm font-semibold text-white mb-1">Global Infrastructure</h4>
+                    <p className="text-sm text-white/60 leading-relaxed">
+                      99.9% uptime with enterprise-grade security by default.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Section - Refined feature showcase */}
+          <div className="relative">
+            {/* Subtle border accent */}
+            <div className="absolute -top-px left-0 right-0 h-px bg-linear-to-r from-transparent via-white/10 to-transparent" />
+            
+            <div className="pt-8 space-y-4">
+              <div className="flex items-center gap-3">
+              
+                <h3 className="text-base font-semibold text-white tracking-wide">
+                  Trusted Cloud Platform
+                </h3>
+              </div>
+              <p className="text-sm text-white/70 leading-relaxed max-w-md font-light">
+                Trusted by BetterAuth, Medusa, Shopify, and thousands of applications worldwide.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Right side form */}
       <div className="relative flex flex-col justify-center bg-background">
-        <div className="absolute top-4 right-4">
-          {/* <ThemeToggle /> */}
-        </div>
-
-        {/* <div>
-          <label>Email</label>
-          <input {...register('email')} placeholder="Email Address" />
-          {errors.email && <p>{errors.email.message}</p>}
-        </div> */}
-
         <form
-          // onSubmit={handleSubmit(onSubmit)}
+          onSubmit={form.handleSubmit(onSubmit)}
           className="flex items-center justify-center px-6 py-12"
         >
           <Card className="w-full max-w-md bg-transparent shadow-none border-none text-foreground">
             <CardHeader className="space-y-2 text-center">
-              <CardTitle className="text-3xl font-bold tracking-tighter">
+              <h2 className="text-3xl f tracking-tighter">
                 Sign in to your account
-              </CardTitle>
+              </h2>
             </CardHeader>
 
-              <CardContent className="space-y-4">
-              <div className="flex justify-center flex-row gap-3 w-full text-">
-              <button className="flex items-center w-full gap-2.5 px-10 py-2.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm">
-                <svg className="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                </svg>
-                <span className="text-sm font-semibold text-gray-700">Google</span>
-              </button>
+            <CardContent className="space-y-4">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleGoogleSignIn}
+                className="flex items-center w-full gap-2.5 px-10 py-2.5 border rounded-lg transition-colors shadow-none hover:bg-muted"
+              >
+                <Google className="w-5 h-5" />
+                <span className="text-sm font-semibold text-foreground">
+                  Continue with Google
+                </span>
+              </Button>
 
-      <button className="flex justify-center items-start gap-2.5 w-full px-10 py-2.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm">
-        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#181717" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-        </svg>
-        <span className="text-sm font-semibold text-gray-700">GitHub</span>
-      </button>
-    </div>
-            <div className="flex items-center my-6">
-              <Separator className="flex-1" />
-              <span className="px-4 text-sm text-muted-foreground whitespace-nowrap">
-                or continue with email
-              </span>
-              <Separator className="flex-1" />
-            </div>
-              <div className="flex flex-col flex-1 w-full items-center ">
-              <Tabs defaultValue="password" className="w-full max-w-md">
-                <TabsList className="w-full justify-center">
-                  <TabsTrigger value="password">Password</TabsTrigger>
-                  <TabsTrigger value="magic-link">Magic Link</TabsTrigger>
-                </TabsList>
-                <TabsContent value="one" className="mt-4">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Content for tab one. This demonstrates the tab switching functionality.</p>
-                </TabsContent>
-                <TabsContent value="two" className="mt-4">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Content for tab two with different information displayed.</p>
-                </TabsContent>
-              </Tabs>
-            </div>
-
-              {/* Email */}
-              <div className="space-y-2">
-                <Label id="" className="text-sm font-semibold">Email</Label>
-                  <Input
-                    // {...register('email')}
-                    placeholder="name@example.com"
-                    id="email"
-                    name="email"
-                    type="email"
-                    // value={formData.email}
-                    // onChange={handleChange}
-                    className="pl-10 border rounded-lg outline-none flex-1 text-foreground placeholder:text-muted-foreground"
-                  />
-                </div>
-              
-
-              
-
-                {/* Password */ }
-                <div className="flex justify-between"><Label className="text-sm font-semibold">Password</Label>
-                <a href="" className="underline text-sm font-semibold">Forgot password?</a></div>
-                
-                <div>
-                  {/* <Lock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" /> */}
-                  <Input
-                    // {...register('password')}
-                    id="password"
-                    name="password"
-                    // type={showPassword ? 'text' : 'password'}
-                    // value={formData.password}
-                    // onChange={handleChange}
-                    placeholder="••••••••"
-                    className="pl-10 border rounded-lg outline-none flex-1 text-foreground placeholder:text-muted-foreground"
-                  /> 
-                  <Button
-                    type="button"
-                    className="absolute right-3 top-3 text-sm font-semibold bg text-black bg-white shadow-md hover:text-foreground "
-                  >
-              Sign Up
-                  </Button>
-                  <div className="flex flex-row gap-2 items-center py-2">  <Checkbox/>
-                  <span className="text-sm font-semibold">Remeber me</span></div>
-                 
+              <div className="flex items-center my-6">
+                <Separator className="flex-1" />
+                <span className="px-4 text-sm text-muted-foreground whitespace-nowrap">
+                  or continue with email
+                </span>
+                <Separator className="flex-1" />
               </div>
 
-              {/* Submit */}
-                <Button
-                  onClick={ (e) =>
-                  {
-                    e.preventDefault()
-                  }}
+              <Controller
+                control={form.control}
+                name="email"
+                render={({ field, fieldState: { error } }) => (
+                  <TextField
+                    {...field}
+                    id="email"
+                    label="Email"
+                    type="email"
+                    placeholder="name@example.com"
+                    className="shadow-none"
+                    error={error?.message}
+                  />
+                )}
+              />
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-sm font-semibold">
+                    Password
+                  </Label>
+                  <Link
+                    href="/auth/forgot-password"
+                    className="text-sm font-semibold underline hover:text-foreground transition-colors"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+                <Controller
+                  control={form.control}
+                  name="password"
+                  render={({ field, fieldState: { error } }) => (
+                    <div className="space-y-1.5">
+                      <InputGroup
+                        className={ "shadow-none"}
+                        aria-invalid={error ? "true" : "false"}
+                      >
+                        <InputGroupInput
+                          {...field}
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          className="shadow-none"
+                        />
+                        <InputGroupAddon align="inline-end">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 hover:bg-transparent shadow-none"
+                            onClick={() => setShowPassword(!showPassword)}
+                            aria-label={showPassword ? "Hide password" : "Show password"}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <Eye className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </Button>
+                        </InputGroupAddon>
+                      </InputGroup>
+                      {error?.message && (
+                        <p className="text-sm text-destructive">{error.message}</p>
+                      )}
+                    </div>
+                  )}
+                />
+              </div>
+
+              {/* Remember Me Checkbox */}
+              <Controller
+                control={form.control}
+                name="rememberMe"
+                render={({ field }) => (
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="remember-me"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                    <Label
+                      htmlFor="remember-me"
+                      className="text-sm font-semibold cursor-pointer"
+                    >
+                      Remember me
+                    </Label>
+                  </div>
+                )}
+              />
+
+              {/* Submit Button */}
+              <Button
                 type="submit"
-                className="w-full  text-white font-semibold  rounded-md transition-all duration-300 hover:scale-105 focus-ring-4 hover:shadow-lg"
+                className="w-full font-semibold rounded-md transition-all duration-300 hover:scale-[1.02] focus:ring-4 hover:shadow-lg"
+                disabled={isSubmitting}
               >
-                  Sign in
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  "Sign in"
+                )}
               </Button>
 
               <div className="my-6">
-                <p className="text-center texs-sm text-muted-foreground">
-                  By continuing you agree to our{' '}
-                  <a href="#" className="underline hover:text-foreground">Terms of Service</a>
-                  {' '}and{' '}
-                  <a href="#" className="underline hover:text-foreground">Privacy Policy</a>
+                <p className="text-center text-sm text-muted-foreground">
+                  By continuing you agree to our{" "}
+                  <Link
+                    href="/terms"
+                    className="underline hover:text-foreground transition-colors"
+                  >
+                    Terms of Service
+                  </Link>
+                  {" "}and{" "}
+                  <Link
+                    href="/privacy"
+                    className="underline hover:text-foreground transition-colors"
+                  >
+                    Privacy Policy
+                  </Link>
                 </p>
               </div>
 
-              {/* Social Logins */}
+              {/* Sign Up Link */}
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">
+                  Don&apos;t have an account?{" "}
+                  <Link
+                    href="/auth/signup"
+                    className="font-semibold underline hover:text-foreground transition-colors"
+                  >
+                    Sign up
+                  </Link>
+                </p>
+              </div>
             </CardContent>
 
             <CardFooter className="text-center text-sm text-muted-foreground">
-            
+              {/* Footer content if needed */}
             </CardFooter>
           </Card>
         </form>
       </div>
     </div>
-    </div>
-  )
+  );
 }
-  
-export default Signin
