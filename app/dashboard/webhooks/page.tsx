@@ -375,9 +375,14 @@ export default function WebhooksPage() {
 
                     {/* Main Content */}
                     <div className="text-center max-w-2xl space-y-4">
-                      <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                        Webhook Overview
-                      </h2>
+                      <div className="flex items-center justify-center gap-3">
+                        <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                          Webhook Overview
+                        </h2>
+                        <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                          Coming Soon
+                        </Badge>
+                      </div>
                       <p className="text-sm text-muted-foreground/80 max-w-md mx-auto">
                         We&apos;re building a comprehensive overview dashboard that will give you insights into your webhook performance, analytics, and real-time monitoring.
                       </p>
