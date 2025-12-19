@@ -1,70 +1,59 @@
-"use client"
+"use client";
 
-import React, { useState } from 'react'
-import { FullscreenModal } from '@/components/fullscreen-modal'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Checkbox } from '@/components/ui/checkbox'
-import { ArrowLeft, RotateCcw } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { FullScreenModal } from "@/components/fullscreen-modal";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft } from "lucide-react";
+import * as RHF from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { TextAreaField, TextField } from "@/components/input-picker";
+
+const schema = z.object({
+  destinationName: z.string().min(3),
+  endpointUrl: z.url(),
+  description: z.string().optional(),
+  events: z.array(z.string()).min(1),
+});
 
 interface WebhooksModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 const WEBHOOK_EVENTS = [
-  { id: 'customer_created', label: 'Customer Created' },
-  { id: 'invoice_created', label: 'Invoice Created' },
-  { id: 'payment_succeded', label: 'Payment Succeeded' },
-  { id: 'payment_failed', label: 'Payment Failed' },
-] as const
+  { id: "customer.created", label: "Customer Created" },
+  { id: "invoice.created", label: "Invoice Created" },
+  { id: "payment.succeded", label: "Payment Succeeded" },
+  { id: "payment.failed", label: "Payment Failed" },
+] as const;
 
-export type WebhookEvent = typeof WEBHOOK_EVENTS[number]['id']
+export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number]["id"];
 
 export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
-  const [destinationName, setDestinationName] = useState('exquisite-legacy')
-  const [endpointUrl, setEndpointUrl] = useState('https://')
-  const [description, setDescription] = useState('')
-  const [selectedEvents, setSelectedEvents] = useState<Set<WebhookEvent>>(new Set())
+  const form = RHF.useForm({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      destinationName: "",
+      endpointUrl: "https://",
+      description: "",
+      events: [] as string[],
+    },
+  });
 
-  const generateDestinationName = () => {
-    const adjectives = ['exquisite', 'elegant', 'smooth', 'bright', 'swift', 'bold', 'calm', 'keen']
-    const nouns = ['legacy', 'stream', 'pulse', 'wave', 'spark', 'glow', 'edge', 'peak']
-    const randomAdj = adjectives[Math.floor(Math.random() * adjectives.length)]
-    const randomNoun = nouns[Math.floor(Math.random() * nouns.length)]
-    setDestinationName(`${randomAdj}-${randomNoun}`)
-  }
-
-  const handleEventToggle = (eventId: WebhookEvent) => {
-    const newSelected = new Set(selectedEvents)
-    if (newSelected.has(eventId)) {
-      newSelected.delete(eventId)
-    } else {
-      newSelected.add(eventId)
-    }
-    setSelectedEvents(newSelected)
-  }
+  const events = form.watch("events");
 
   const handleSelectAll = () => {
-    if (selectedEvents.size === WEBHOOK_EVENTS.length) {
-      setSelectedEvents(new Set())
+    if (events.length === WEBHOOK_EVENTS.length) {
+      form.setValue("events", []);
     } else {
-      setSelectedEvents(new Set(WEBHOOK_EVENTS.map(e => e.id)))
+      form.setValue(
+        "events",
+        WEBHOOK_EVENTS.map((e) => e.id)
+      );
     }
-  }
-
-  const handleCreateDestination = () => {
-    console.log('Create destination', {
-      destinationName,
-      endpointUrl,
-      description,
-      events: Array.from(selectedEvents),
-    })
-    onOpenChange(false)
-  }
+  };
 
   const footer = (
     <div className="flex w-full justify-between">
@@ -86,104 +75,65 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
           <ArrowLeft className="h-4 w-4" />
           Back
         </Button>
-        <Button
-          type="button"
-          onClick={handleCreateDestination}
-          className="gap-2"
-          disabled={selectedEvents.size === 0}
-        >
+        <Button type="submit" className="gap-2">
           Create destination
         </Button>
       </div>
     </div>
-  )
+  );
 
   return (
-    <FullscreenModal
+    <FullScreenModal
       open={open}
       onOpenChange={onOpenChange}
       title="Configure destination"
-      description="Tell Stripe where to send events and give your destination a helpful description."
+      description="Tell StellarToo where to send events and give your destination a helpful description."
       footer={footer}
     >
-      <div className="space-y-8">
-        {/* Read-only Info Section */}
-        <div className="space-y-3 p-4 rounded-lg border border-transparent bg-transparent">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-            <div>
-              <span className="text-muted-foreground">Events from:</span>
-              <span className="ml-2 font-medium">Your account</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Payload style:</span>
-              <span className="ml-2 font-medium">Thin</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">API version:</span>
-              <span className="ml-2 font-medium">Unversioned</span>
-            </div>
-    <div>
-              <span className="text-muted-foreground">Listening to:</span>
-              <span className="ml-2 font-medium font-mono text-xs">
-                v2.core.account_link.returned
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Form Fields */}
+      <form
+        onSubmit={form.handleSubmit((data) => console.log(data))}
+        className="space-y-8"
+      >
         <div className="space-y-6 max-w-2xl">
-          {/* Destination Name */}
-          <div className="space-y-2">
-            <Label htmlFor="destination-name">Destination name</Label>
-            <div className="flex gap-2">
-              <Input
+          <RHF.Controller
+            control={form.control}
+            name="destinationName"
+            render={({ field, fieldState: { error } }) => (
+              <TextField
+                {...field}
                 id="destination-name"
-                value={destinationName}
-                onChange={(e) => setDestinationName(e.target.value)}
-                className="flex-1 shadow-none"
+                label="Destination name"
+                error={error?.message}
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="default"
-                onClick={generateDestinationName}
-                className="gap-2 shadow-none"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Regenerate
-              </Button>
-            </div>
-          </div>
+            )}
+          />
 
-          {/* Endpoint URL */}
-          <div className="space-y-2">
-            <Label htmlFor="endpoint-url">Endpoint URL</Label>
-            <p className="text-sm text-muted-foreground">
-              Webhooks require a URL to send events to.
-            </p>
-            <Input
-              id="endpoint-url"
-              type="url"
-              value={endpointUrl}
-              className="shadow-none"
-              onChange={(e) => setEndpointUrl(e.target.value)}
-              placeholder="https://"
-            />
-          </div>
+          <RHF.Controller
+            control={form.control}
+            name="endpointUrl"
+            render={({ field, fieldState: { error } }) => (
+              <TextField
+                {...field}
+                id="endpoint-url"
+                label="Endpoint URL"
+                error={error?.message}
+              />
+            )}
+          />
 
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={description}
-      
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="An optional description of the destination..."
-              className="min-h-24 resize-y shadow-none"
-            />
-          </div>
+          <RHF.Controller
+            control={form.control}
+            name="description"
+            render={({ field, fieldState: { error } }) => (
+              <TextAreaField
+                {...field}
+                value={field.value as string}
+                id="description"
+                label="Description"
+                error={error?.message}
+              />
+            )}
+          />
 
           {/* Events Selection */}
           <div className="space-y-3">
@@ -196,62 +146,57 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
                 onClick={handleSelectAll}
                 className="h-auto py-1 px-2 text-xs shadow-none"
               >
-                {selectedEvents.size === WEBHOOK_EVENTS.length ? 'Deselect all' : 'Select all'}
+                {events.length === WEBHOOK_EVENTS.length
+                  ? "Deselect all"
+                  : "Select all"}
               </Button>
             </div>
             <p className="text-sm text-muted-foreground">
               Choose which events this webhook should listen to.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {WEBHOOK_EVENTS.map((event) => {
-                const isChecked = selectedEvents.has(event.id)
-                return (
-                  <div
-                    key={event.id}
-                    role="button"
-                    tabIndex={0}
-                    className={cn(
-                      "flex items-center gap-3 p-4 rounded-lg border transition-all cursor-pointer",
-                      "hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                      isChecked
-                        ? "bg-primary/5 border-primary/30 "
-                        : "bg-background border-border hover:bg-muted/30"
-                    )}
-                    onClick={() => handleEventToggle(event.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        handleEventToggle(event.id)
-                      }
-                    }}
-                  >
-                    <Checkbox
-                      id={event.id}
-                      checked={isChecked}
-                      onCheckedChange={() => handleEventToggle(event.id)}
-                      className="pointer-events-none"
-                    />
-                    <Label
-                      htmlFor={event.id}
-                      className="text-sm font-medium cursor-pointer flex-1 select-none"
-                      onClick={(e) => e.preventDefault()}
-                    >
-                      {event.label}
-                    </Label>
+            <RHF.Controller
+              control={form.control}
+              name="events"
+              render={({ field, fieldState: { error } }) => (
+                <div className="space-y-2">
+                  <div className="flex flex-col gap-4">
+                    {WEBHOOK_EVENTS.map((event) => (
+                      <div key={event.id} className="flex items-center gap-2">
+                        <Checkbox
+                          id={event.id}
+                          checked={field.value.includes(event.id)}
+                          onCheckedChange={(checked) => {
+                            const newValue = checked
+                              ? [...field.value, event.id]
+                              : field.value.filter(
+                                  (id: string) => id !== event.id
+                                );
+                            field.onChange(newValue);
+                          }}
+                        />
+                        <Label
+                          htmlFor={event.id}
+                          className="text-sm font-medium cursor-pointer"
+                        >
+                          {event.label}
+                        </Label>
+                      </div>
+                    ))}
                   </div>
-                )
-              })}
-            </div>
-            {selectedEvents.size === 0 && (
-              <p className="text-sm text-muted-foreground italic">
-                Please select at least one event to continue.
-              </p>
-            )}
+
+                  {error?.message && (
+                    <p className="text-sm text-destructive" role="alert">
+                      {error.message}
+                    </p>
+                  )}
+                </div>
+              )}
+            />
           </div>
         </div>
-    </div>
-    </FullscreenModal>
-  )
+      </form>
+    </FullScreenModal>
+  );
 }
 
-export default WebHooksModal
+export default WebHooksModal;
