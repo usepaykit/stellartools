@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -56,7 +56,6 @@ function slugifyOrgName(name: string): string {
 
 export default function CreateOrganization() {
     const router = useRouter();
-    const [mounted, setMounted] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const isSlugEditedRef = useRef(false);
 
@@ -70,14 +69,10 @@ export default function CreateOrganization() {
         mode: 'onBlur',
     });
 
-    const { watch, setValue, formState: { errors } } = form;
-    const name = watch('name');
-    const slug = watch('slug');
-    const agreed = watch('agreed');
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
+    const { setValue, control, formState: { errors } } = form;
+    const name = useWatch({ control, name: 'name' });
+    const slug = useWatch({ control, name: 'slug' });
+    const agreed = useWatch({ control, name: 'agreed' });
 
     useEffect(() => {
         if (!isSlugEditedRef.current && name) {
@@ -124,18 +119,16 @@ export default function CreateOrganization() {
     return (
         <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
             <div className="w-full max-w-[440px] flex flex-col items-center">
-                {mounted && (
-                    <div className="mb-8 transition-opacity duration-300">
-                        <Image
-                            src="/images/logo-light.png"
-                            alt="Stellar Tools logo"
-                            width={80}
-                            height={80}
-                            className="object-contain rounded-md"
-                            priority
-                        />
-                    </div>
-                )}
+                <div className="mb-8 transition-opacity duration-300">
+                    <Image
+                        src="/images/logo-light.png"
+                        alt="Stellar Tools logo"
+                        width={80}
+                        height={80}
+                        className="object-contain rounded-md"
+                        priority
+                    />
+                </div>
 
                 <div className="text-center mb-8">
                     <h1 className="text-3xl font-semibold tracking-tight mb-2 text-foreground">

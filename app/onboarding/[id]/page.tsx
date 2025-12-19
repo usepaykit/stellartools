@@ -4,105 +4,142 @@ import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Textarea } from '@/components/ui/textarea';
+import { useForm, useWatch } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { ImagePlus, X } from 'lucide-react';
+import { TextField, TextAreaField } from '@/components/input-picker';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { InputGroup, InputGroupAddon, InputGroupText, InputGroupInput } from '@/components/ui/input-group';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { FileDropzone, type FileDropzoneFile } from '@/components/file-dropzone';
+import { toast } from '@/components/ui/toast';
+import { Loader2, Plus, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
+
+const productSchema = z.object({
+    name: z
+        .string()
+        .min(1, 'Product name is required')
+        .min(2, 'Product name must be at least 2 characters')
+        .max(100, 'Product name must be less than 100 characters')
+        .trim(),
+    description: z
+        .string()
+        .max(2000, 'Description must be less than 2000 characters')
+        .optional()
+        .or(z.literal('')),
+    billingCycle: z.enum(['one-time', 'recurring']),
+    recurringInterval: z
+        .string()
+        .regex(/^\d+$/, 'Interval must be a number')
+        .refine((val) => parseInt(val) >= 1, 'Interval must be at least 1')
+        .optional(),
+    recurringPeriod: z.enum(['day', 'week', 'month', 'year']).optional(),
+    pricingModel: z.enum(['fixed', 'tiered', 'usage']),
+    prices: z
+        .array(
+            z
+                .string()
+                .min(1, 'Price is required')
+                .regex(/^\d+(\.\d{1,2})?$/, 'Price must be a valid number (e.g., 10.00 or 10)')
+                .refine((val) => parseFloat(val) > 0, 'Price must be greater than 0')
+        )
+        .min(1, 'At least one price is required'),
+});
+
+type ProductFormData = z.infer<typeof productSchema>;
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 export default function OnboardingProject() {
     const params = useParams();
     const router = useRouter();
-    const [mounted, setMounted] = useState(false);
     const id = params?.id as string;
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [imagePreviews, setImagePreviews] = useState<FileDropzoneFile[]>([]);
 
-    React.useEffect(() => {
-        setMounted(true);
-    }, []);
+    const form = useForm<ProductFormData>({
+        resolver: zodResolver(productSchema),
+        defaultValues: {
+            name: '',
+            description: '',
+            billingCycle: 'recurring',
+            recurringInterval: '1',
+            recurringPeriod: 'month',
+            pricingModel: 'fixed',
+            prices: ['10.00'],
+        },
+        mode: 'onBlur',
+    });
 
-    // const logoSrc = resolvedTheme === 'dark' ? '/images/logo-light.png' : '/images/logo-dark.png';
+    const { setValue, control, formState: { errors } } = form;
+    const billingCycle = useWatch({ control, name: 'billingCycle' });
+    const name = useWatch({ control, name: 'name' });
+    const description = useWatch({ control, name: 'description' });
+    const recurringInterval = useWatch({ control, name: 'recurringInterval' });
+    const recurringPeriod = useWatch({ control, name: 'recurringPeriod' });
+    const pricingModel = useWatch({ control, name: 'pricingModel' });
+    const prices = useWatch({ control, name: 'prices' }) || ['10.00'];
 
-    const [productName, setProductName] = useState('');
-    const [productDescription, setProductDescription] = useState('');
+    const handleFilesChange = (files: FileDropzoneFile[]) => {
+        setImagePreviews(files);
+    };
 
-    const [billingCycle, setBillingCycle] = useState<'one-time' | 'recurring'>('recurring');
-    const [recurringInterval, setRecurringInterval] = useState('1');
-    const [recurringPeriod, setRecurringPeriod] = useState('month');
-    const [pricingModel, setPricingModel] = useState('fixed');
-    const [price, setPrice] = useState('10.00');
+    const onSubmit = async (data: ProductFormData) => {
+        setIsSubmitting(true);
 
-    // Media preview state
-    const [imagePreviews, setImagePreviews] = useState<{ url: string; file: File }[]>([]);
+        try {
+            const formData = {
+                ...data,
+                images: imagePreviews.map((fileWithPreview) => fileWithPreview.file),
+            };
 
-    const handleSetup = () => {
-        if (!productName.trim()) {
-            alert('Please enter a product name.');
-            return;
+            console.log('Product setup:', formData);
+
+            toast.success('Product created successfully!', {
+                description: 'Redirecting to your dashboard...',
+            } as Parameters<typeof toast.success>[1]);
+
+            router.push(`/dashboard/${id}`);
+        } catch (error) {
+            console.error('Failed to create product:', error);
+            toast.error('Failed to create product', {
+                description: 'Please try again later',
+            } as Parameters<typeof toast.error>[1]);
+            setIsSubmitting(false);
         }
-        console.log('Product setup:', {
-            name: productName,
-            description: productDescription,
-            billingCycle,
-            recurringInterval,
-            recurringPeriod,
-            pricingModel,
-            price
-        });
-        // Navigate to next step or dashboard
-        // router.push(`/dashboard/${id}/...`);
     };
 
     const handleSkip = () => {
-        // Navigate to dashboard or next step
         router.push(`/dashboard/${id}`);
     };
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (files && files.length > 0) {
-            const newPreviews: { url: string; file: File }[] = [];
+    const addPrice = () => {
+        const currentPrices = prices || [];
+        setValue('prices', [...currentPrices, ''], { shouldValidate: false });
+    };
 
-            Array.from(files).forEach((file) => {
-                // Check file size (10MB limit)
-                if (file.size > 10 * 1024 * 1024) {
-                    alert(`File ${file.name} exceeds 10MB limit.`);
-                    return;
-                }
-
-                // Create preview URL
-                const previewUrl = URL.createObjectURL(file);
-                newPreviews.push({ url: previewUrl, file });
-            });
-
-            setImagePreviews((prev) => [...prev, ...newPreviews]);
-            console.log('Files selected:', files);
+    const removePrice = (index: number) => {
+        const currentPrices = prices || [];
+        if (currentPrices.length > 1) {
+            const updatedPrices = currentPrices.filter((_, i) => i !== index);
+            setValue('prices', updatedPrices, { shouldValidate: true });
         }
     };
 
-    const removeImage = (index: number) => {
-        setImagePreviews((prev) => {
-            // Revoke the object URL to free memory
-            URL.revokeObjectURL(prev[index].url);
-            return prev.filter((_, i) => i !== index);
-        });
+    const updatePrice = (index: number, value: string) => {
+        const currentPrices = prices || [];
+        const updatedPrices = [...currentPrices];
+        updatedPrices[index] = value;
+        setValue('prices', updatedPrices, { shouldValidate: true });
     };
-
-    // Cleanup object URLs on unmount
-    React.useEffect(() => {
-        return () => {
-            imagePreviews.forEach((preview) => {
-                URL.revokeObjectURL(preview.url);
-            });
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
 
     return (
         <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
             <div className="w-full max-w-[600px] flex flex-col items-center">
-
-                {mounted && (
                     <div className="mb-8">
                         <Image
                             src="/images/logo-light.png"
@@ -110,9 +147,9 @@ export default function OnboardingProject() {
                             width={50}
                             height={50}
                             className="object-contain rounded-md"
+                        priority
                         />
                     </div>
-                )}
 
                 <h1 className="text-3xl font-normal tracking-tight mb-2 text-foreground text-center">
                     Your first product
@@ -122,8 +159,8 @@ export default function OnboardingProject() {
                     Setup your first digital product to get started.
                 </p>
 
-                <div className="w-full space-y-6">
-                    <Card>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="w-full space-y-6" noValidate>
+                    <Card className='border-none shadow-none'>
                         <CardContent className="space-y-5 pt-6">
                             <div className="space-y-2">
                                 <h2 className="text-lg font-normal text-foreground">
@@ -134,41 +171,36 @@ export default function OnboardingProject() {
                                 </p>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="productName">
-                                    Name
-                                </Label>
-                                <Input
+                            <TextField
                                     id="productName"
-                                    type="text"
-                                    value={productName}
-                                    onChange={(e) => setProductName(e.target.value)}
+                                label="Name"
+                                value={name || ''}
+                                onChange={(value) => setValue('name', value, { shouldValidate: true })}
                                     placeholder="Enter product name"
+                                error={errors.name?.message || null}
+                                labelClassName="text-sm font-medium"
+                                className="shadow-none"
                                 />
-                            </div>
 
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <Label htmlFor="productDescription">
-                                        Description
-                                    </Label>
-                                    <span className="text-xs text-muted-foreground">
-                                        Markdown format
-                                    </span>
+                                
+                        
                                 </div>
-                                <Textarea
+                                <TextAreaField
                                     id="productDescription"
-                                    value={productDescription}
-                                    onChange={(e) => setProductDescription(e.target.value)}
+                                    label={'Description'}
+                                    value={description || ''}
+                                    onChange={(value) => setValue('description', value, { shouldValidate: true })}
                                     placeholder="Enter product description"
-                                    className="min-h-[120px]"
+                                    error={errors.description?.message || null}
+                                    className="min-h-[120px] shadow-none"
                                 />
                             </div>
                         </CardContent>
                     </Card>
 
-                    {/* Media Section */}
-                    <Card>
+                    <Card className='shadow-none'>
                         <CardContent className="space-y-5 pt-6">
                             <div className="space-y-2">
                                 <h2 className="text-lg font-normal text-foreground">
@@ -179,60 +211,24 @@ export default function OnboardingProject() {
                                 </p>
                             </div>
 
-                            <div className="space-y-4">
-                                {imagePreviews.length > 0 ? (
-                                    /* Image Previews - Replaces upload area */
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                        {imagePreviews.map((preview, index) => (
-                                            <div
-                                                key={index}
-                                                className="relative group aspect-video rounded-lg overflow-hidden border border-input bg-muted"
-                                            >
-                                                <Image
-                                                    src={preview.url}
-                                                    alt={`Preview ${index + 1}`}
-                                                    fill
-                                                    className="object-cover"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeImage(index)}
-                                                    className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 hover:bg-background border border-input opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    aria-label="Remove image"
-                                                >
-                                                    <X className="w-4 h-4 text-foreground" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    /* Upload Area - Only shown when no images */
-                                    <div className="relative">
-                                        <input
-                                            type="file"
+                            <FileDropzone
                                             id="mediaUpload"
+                                value={imagePreviews}
+                                onChange={handleFilesChange}
+                                label={null}
+                                title="Add product media"
+                                description="Up to 10MB each. 16:9 ratio recommended for optimal display."
+                                maxSize={MAX_FILE_SIZE}
                                             multiple
-                                            accept="image/*"
-                                            onChange={handleFileUpload}
-                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                        />
-                                        <div className="border-2 border-dashed border-input rounded-lg p-12 flex flex-col items-center justify-center text-center hover:bg-accent/50 transition-colors">
-                                            <ImagePlus className="w-12 h-12 text-muted-foreground mb-4" />
-                                            <p className="text-sm font-medium text-foreground mb-1">
-                                                Add product media
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                Up to 10MB each. 16:9 ratio recommended for optimal display.
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                                accept="image/*,application/pdf,.doc,.docx,.txt"
+                                showPreview
+                                previewGridCols={3}
+                                dropzoneClassName="shadow-none"
+                            />
                         </CardContent>
                     </Card>
 
-                    {/* Pricing Section */}
-                    <Card>
+                    <Card className='shadow-none'>
                         <CardContent className="space-y-5 pt-6">
                             <div className="space-y-2">
                                 <h2 className="text-lg font-normal text-foreground">
@@ -243,124 +239,172 @@ export default function OnboardingProject() {
                                 </p>
                             </div>
 
-                            {/* Billing Cycle */}
-                            <div className="space-y-3">
+                            <RadioGroup
+                                value={billingCycle}
+                                onValueChange={(value) => setValue('billingCycle', value as 'one-time' | 'recurring', { shouldValidate: true })}
+                                className="space-y-3"
+                            >
                                 <div className="flex items-center space-x-2">
-                                    <input
-                                        type="radio"
-                                        id="one-time"
-                                        name="billingCycle"
-                                        value="one-time"
-                                        checked={billingCycle === 'one-time'}
-                                        onChange={(e) => setBillingCycle(e.target.value as 'one-time' | 'recurring')}
-                                        className="w-4 h-4 text-primary border-input focus:ring-primary focus:ring-2"
-                                    />
-                                    <Label htmlFor="one-time" className="font-normal cursor-pointer">
+                                    <RadioGroupItem value="one-time" id="one-time" />
+                                    <Label htmlFor="one-time" className="font-normal cursor-pointer text-foreground">
                                         One-time purchase
                                     </Label>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                    <input
-                                        type="radio"
-                                        id="recurring"
-                                        name="billingCycle"
-                                        value="recurring"
-                                        checked={billingCycle === 'recurring'}
-                                        onChange={(e) => setBillingCycle(e.target.value as 'one-time' | 'recurring')}
-                                        className="w-4 h-4 text-primary border-input focus:ring-primary focus:ring-2"
-                                    />
-                                    <Label htmlFor="recurring" className="font-normal cursor-pointer">
+                                    <RadioGroupItem value="recurring" id="recurring" />
+                                    <Label htmlFor="recurring" className="font-normal cursor-pointer text-foreground">
                                         Recurring subscription
                                     </Label>
                                 </div>
-                            </div>
+                            </RadioGroup>
 
-                            {/* Recurring Subscription Details */}
                             {billingCycle === 'recurring' && (
                                 <div className="flex items-center gap-2 pl-6">
                                     <span className="text-sm text-foreground">Every</span>
-                                    <Input
+                                    <TextField
+                                        id="recurringInterval"
+                                        label={null}
+                                        value={recurringInterval || '1'}
+                                        onChange={(value) => setValue('recurringInterval', value, { shouldValidate: true })}
                                         type="number"
-                                        value={recurringInterval}
-                                        onChange={(e) => setRecurringInterval(e.target.value)}
-                                        className="w-20"
+                                        className="w-20 shadow-none"
                                         min="1"
+                                        error={errors.recurringInterval?.message || null}
                                     />
-                                    <select
-                                        value={recurringPeriod}
-                                        onChange={(e) => setRecurringPeriod(e.target.value)}
-                                        className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    <Select
+                                        value={recurringPeriod || 'month'}
+                                        onValueChange={(value) => setValue('recurringPeriod', value as 'day' | 'week' | 'month' | 'year', { shouldValidate: true })}
                                     >
-                                        <option value="day">day</option>
-                                        <option value="week">week</option>
-                                        <option value="month">month</option>
-                                        <option value="year">year</option>
-                                    </select>
+                                        <SelectTrigger className="w-full shadow-none">
+                                            <SelectValue placeholder="Select period" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="day">day</SelectItem>
+                                            <SelectItem value="week">week</SelectItem>
+                                            <SelectItem value="month">month</SelectItem>
+                                            <SelectItem value="year">year</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             )}
 
-                            {/* Pricing Model */}
                             <div className="space-y-2">
-                                <Label htmlFor="pricingModel">
+                                <label htmlFor="pricingModel" className="text-sm font-medium text-foreground block">
                                     Pricing Model
-                                </Label>
-                                <select
-                                    id="pricingModel"
-                                    value={pricingModel}
-                                    onChange={(e) => setPricingModel(e.target.value)}
-                                    className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                </label>
+                                <Select
+                                    value={pricingModel || 'fixed'}
+                                    onValueChange={(value) => setValue('pricingModel', value as 'fixed' | 'tiered' | 'usage', { shouldValidate: true })}
                                 >
-                                    <option value="fixed">Fixed price</option>
-                                    <option value="tiered">Tiered pricing</option>
-                                    <option value="usage">Usage-based</option>
-                                </select>
+                                    <SelectTrigger 
+                                        className={cn(
+                                            "w-full shadow-none",
+                                            errors.pricingModel && "border-destructive"
+                                        )}
+                                        aria-invalid={errors.pricingModel ? 'true' : 'false'}
+                                    >
+                                        <SelectValue placeholder="Select pricing model" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="fixed">Fixed price</SelectItem>
+                                        <SelectItem value="tiered">Tiered pricing</SelectItem>
+                                        <SelectItem value="usage">Usage-based</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                {errors.pricingModel && (
+                                    <p className="text-sm text-destructive" role="alert">
+                                        {errors.pricingModel.message}
+                                    </p>
+                                )}
                             </div>
 
-                            {/* Price Input */}
-                            <div className="space-y-2">
-                                <Label htmlFor="price">
-                                    Price
-                                </Label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                                    <Input
-                                        id="price"
+                            <div className="space-y-3">
+                                <label className="text-sm font-medium text-foreground block">
+                                    Price{prices.length > 1 ? 's' : ''}
+                                </label>
+                                {prices.map((price, index) => (
+                                    <div key={index} className="space-y-2">
+                                        <div className="flex items-center gap-2">
+                                            <InputGroup
+                                                className={cn(
+                                                    'shadow-none flex-1',
+                                                    errors.prices?.[index] && 'border-destructive'
+                                                )}
+                                            >
+                                                <InputGroupAddon align="inline-start">
+                                                    <InputGroupText>$</InputGroupText>
+                                                </InputGroupAddon>
+                                                <InputGroupInput
+                                                    id={`price-${index}`}
                                         type="text"
-                                        value={price}
-                                        onChange={(e) => setPrice(e.target.value)}
-                                        className="pl-7"
+                                                    value={price || ''}
+                                                    onChange={(e) => updatePrice(index, e.target.value)}
                                         placeholder="0.00"
-                                    />
+                                                    aria-invalid={errors.prices?.[index] ? 'true' : 'false'}
+                                                    aria-describedby={errors.prices?.[index] ? `price-${index}-error` : undefined}
+                                                />
+                                            </InputGroup>
+                                            {prices.length > 1 && (
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => removePrice(index)}
+                                                    className="shrink-0"
+                                                    aria-label="Remove price"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                        {errors.prices?.[index] && (
+                                            <p
+                                                id={`price-${index}-error`}
+                                                className="text-sm text-destructive"
+                                                role="alert"
+                                            >
+                                                {errors.prices[index]?.message}
+                                            </p>
+                                        )}
                                 </div>
+                                ))}
+                                {errors.prices && typeof errors.prices.message === 'string' && (
+                                    <p className="text-sm text-destructive" role="alert">
+                                        {errors.prices.message}
+                                    </p>
+                                )}
                             </div>
 
-                            {/* Add Additional Price Button */}
                             <Button
                                 type="button"
                                 variant="outline"
-                                className="w-full"
-                                onClick={() => {
-                                    // Handle adding additional price
-                                    console.log('Add additional price');
-                                }}
+                                className="w-full shadow-none"
+                                onClick={addPrice}
                             >
+                                <Plus className="mr-2 h-4 w-4" />
                                 Add Additional Price
                             </Button>
                         </CardContent>
                     </Card>
 
-                    {/* Action Buttons */}
                     <div className="flex gap-4">
                         <Button
-                            onClick={handleSetup}
+                            type="submit"
                             className="flex-1"
                             size="lg"
+                            disabled={isSubmitting}
                         >
-                            Setup →
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Setting up...
+                                </>
+                            ) : (
+                                'Setup →'
+                            )}
                         </Button>
                     </div>
 
-                    {/* Bottom Navigation */}
                     <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                         <Link
                             href={`/dashboard/${id}/configure`}
@@ -370,13 +414,14 @@ export default function OnboardingProject() {
                         </Link>
                         <span className="text-foreground">·</span>
                         <button
+                            type="button"
                             onClick={handleSkip}
                             className="hover:text-foreground transition-colors cursor-pointer"
                         >
                             Skip onboarding
                         </button>
                     </div>
-                </div>
+                </form>
             </div>
         </div>
     );
