@@ -1,10 +1,19 @@
 "use client";
 
-import { Search, LayoutGrid, Plus, HelpCircle, Bell, Settings } from "lucide-react";
+import {
+  Search,
+  LayoutGrid,
+  Plus,
+  HelpCircle,
+  Bell,
+  Settings,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { toast } from "@/components/ui/toast";
+import { X } from "lucide-react";
 
 interface NavIconButtonProps {
   icon: React.ReactNode;
