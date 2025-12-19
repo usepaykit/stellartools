@@ -9,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ArrowLeft, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { CodeBlock } from '@/components/code-block'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 
 interface WebhooksModalProps {
   open: boolean
@@ -106,10 +108,10 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
       description="Tell Stripe where to send events and give your destination a helpful description."
       footer={footer}
     >
-      <div className="space-y-8">
+      <div className="space-y-6">
         {/* Read-only Info Section */}
-        <div className="space-y-3 p-4 rounded-lg border border-transparent bg-transparent">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+        <div className="space-y-3 p-4 rounded-lg border bg-muted/30">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
             <div>
               <span className="text-muted-foreground">Events from:</span>
               <span className="ml-2 font-medium">Your account</span>
@@ -122,7 +124,7 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
               <span className="text-muted-foreground">API version:</span>
               <span className="ml-2 font-medium">Unversioned</span>
             </div>
-    <div>
+            <div>
               <span className="text-muted-foreground">Listening to:</span>
               <span className="ml-2 font-medium font-mono text-xs">
                 v2.core.account_link.returned
@@ -131,8 +133,10 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
           </div>
         </div>
 
-        {/* Form Fields */}
-        <div className="space-y-6 max-w-2xl">
+        {/* Main Content: Form and Code Examples Side by Side */}
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+          {/* Form Fields Section */}
+          <div className="flex-1 space-y-6 min-w-0">
           {/* Destination Name */}
           <div className="space-y-2">
             <Label htmlFor="destination-name">Destination name</Label>
@@ -248,8 +252,147 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
               </p>
             )}
           </div>
+          </div>
+
+          {/* Code Examples Section */}
+          <div className="flex-1 space-y-6 min-w-0 lg:max-w-2xl">
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Code Examples</h3>
+              <p className="text-sm text-muted-foreground">
+                Here are examples of how to handle webhook events in your application.
+              </p>
+            </div>
+
+            <Tabs defaultValue="typescript" className="w-full">
+              <TabsList className="w-fit">
+                <TabsTrigger 
+                  value="typescript" 
+                  className="px-4 py-2 min-w-[120px] data-[state=active]:shadow-none"
+                >
+                  TypeScript
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="curl" 
+                  className="px-4 py-2 min-w-[120px] data-[state=active]:shadow-none"
+                >
+                  cURL
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="typescript" className="mt-4">
+                <div className="space-y-2">
+                  <Label>TypeScript Example</Label>
+                  <CodeBlock
+                    language="typescript"
+                    filename="webhook-handler.ts"
+                  >
+{`import { NextRequest, NextResponse } from 'next/server';
+import { verifyWebhookSignature } from '@stellar/webhooks';
+
+export async function POST(request: NextRequest) {
+  const body = await request.text();
+  const signature = request.headers.get('stellar-signature');
+
+  // Verify webhook signature
+  const isValid = verifyWebhookSignature(
+    body,
+    signature,
+    process.env.STELLAR_WEBHOOK_SECRET!
+  );
+
+  if (!isValid) {
+    return NextResponse.json(
+      { error: 'Invalid signature' },
+      { status: 401 }
+    );
+  }
+
+  const event = JSON.parse(body);
+
+  // Handle different event types
+  switch (event.type) {
+    case 'customer_created':
+      await handleCustomerCreated(event.data);
+      break;
+    case 'invoice_created':
+      await handleInvoiceCreated(event.data);
+      break;
+    case 'payment_succeded':
+      await handlePaymentSucceeded(event.data);
+      break;
+    case 'payment_failed':
+      await handlePaymentFailed(event.data);
+      break;
+    default:
+      console.log('Unknown event type:', event.type);
+  }
+
+  return NextResponse.json({ received: true });
+}
+
+async function handleCustomerCreated(data: any) {
+  // Your customer creation logic
+  console.log('Customer created:', data);
+}
+
+async function handleInvoiceCreated(data: any) {
+  // Your invoice creation logic
+  console.log('Invoice created:', data);
+}
+
+async function handlePaymentSucceeded(data: any) {
+  // Your payment success logic
+  console.log('Payment succeeded:', data);
+}
+
+async function handlePaymentFailed(data: any) {
+  // Your payment failure logic
+  console.log('Payment failed:', data);
+}`}
+                </CodeBlock>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="curl" className="mt-4">
+              <div className="space-y-2">
+                <Label>cURL Example</Label>
+                <CodeBlock
+                  language="bash"
+                >
+{`# Test webhook endpoint with cURL
+curl -X POST https://your-endpoint.com/api/webhooks/stellar \\
+  -H "Content-Type: application/json" \\
+  -H "Stellar-Signature: your_signature_here" \\
+  -d '{
+    "id": "evt_1234567890",
+    "type": "customer_created",
+    "created": 1640995200,
+    "data": {
+      "id": "cus_1234567890",
+      "email": "customer@example.com",
+      "name": "John Doe"
+    }
+  }'
+
+# Example webhook payload structure
+# {
+#   "id": "evt_1234567890",
+#   "type": "payment_succeded",
+#   "created": 1640995200,
+#   "data": {
+#     "payment_id": "pay_1234567890",
+#     "amount": 1000,
+#     "currency": "USD",
+#     "customer_id": "cus_1234567890"
+#   }
+# }`}
+                </CodeBlock>
+              </div>
+              </TabsContent>
+            </Tabs>
+          </div>
         </div>
-    </div>
+      </div>
     </FullscreenModal>
   )
 }
