@@ -325,6 +325,10 @@ h6 {
   width: 100%;
 }
 
+[data-sonner-toast][data-styled=true] [data-cancel] {
+  background: transparent !important;
+}
+
 .code-block-wrapper pre,
 .code-block-wrapper code {
   font-size: clamp(12px, 2.5vw, 14px) !important;
