@@ -15,6 +15,20 @@
       "when": 1766236604215,
       "tag": "0001_conscious_alex_wilder",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1766241174562,
+      "tag": "0002_flippant_trauma",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1766241211214,
+      "tag": "0003_shallow_mentor",
+      "breakpoints": true
     }
   ]
 }
