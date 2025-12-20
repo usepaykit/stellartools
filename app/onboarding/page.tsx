@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import * as React from "react";
 
 import { TextField } from "@/components/input-picker";
 import { Button } from "@/components/ui/button";
@@ -12,21 +12,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useForm, useWatch } from "react-hook-form";
+import * as RHF from "react-hook-form";
 import { z } from "zod";
 
 const organizationSchema = z.object({
-  name: z
-    .string()
-    .min(1, "Organization name is required")
-    .min(2, "Organization name must be at least 2 characters")
-    .max(50, "Organization name must be less than 50 characters")
-    .trim(),
+  name: z.string().min(1).min(2).max(50).trim(),
   slug: z
     .string()
-    .min(1, " slug is required")
-    .min(2, " must be at least 2 characters")
-    .max(50, " must be less than 50 characters")
+    .min(1)
+    .min(2)
+    .max(50)
     .regex(
       /^[a-z0-9-]+$/,
       "Slug can only contain lowercase letters, numbers, and hyphens"
@@ -36,67 +31,21 @@ const organizationSchema = z.object({
       "Slug cannot start or end with a hyphen"
     )
     .trim(),
-  agreed: z
+  agreedToTerms: z
     .boolean()
     .refine((val) => val === true, "You must agree to the terms to continue"),
 });
 
 type OrganizationFormData = z.infer<typeof organizationSchema>;
 
-function slugifyOrgName(name: string): string {
-  return name
-    .trim()
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
 export default function CreateOrganization() {
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const isSlugEditedRef = useRef(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const form = useForm<OrganizationFormData>({
+  const form = RHF.useForm<OrganizationFormData>({
     resolver: zodResolver(organizationSchema),
-    defaultValues: {
-      name: "",
-      slug: "",
-      agreed: false,
-    },
-    mode: "onBlur",
+    defaultValues: { name: "", slug: "", agreedToTerms: false },
   });
-
-  const {
-    setValue,
-    control,
-    formState: { errors },
-  } = form;
-  const name = useWatch({ control, name: "name" });
-  const slug = useWatch({ control, name: "slug" });
-  const agreed = useWatch({ control, name: "agreed" });
-
-  useEffect(() => {
-    if (!isSlugEditedRef.current && name) {
-      const generatedSlug = slugifyOrgName(name);
-      setValue("slug", generatedSlug, { shouldValidate: false });
-    }
-  }, [name, setValue]);
-
-  const handleSlugChange = (value: string) => {
-    isSlugEditedRef.current = true;
-    setValue("slug", value, { shouldValidate: true });
-  };
-
-  const handleNameChange = (value: string) => {
-    setValue("name", value, { shouldValidate: true });
-    if (!value.trim()) {
-      isSlugEditedRef.current = false;
-    }
-  };
 
   const onSubmit = async (data: OrganizationFormData) => {
     setIsSubmitting(true);
@@ -151,77 +100,101 @@ export default function CreateOrganization() {
         >
           <Card className="border-none shadow-none">
             <CardContent className="space-y-5 pt-1">
-              <TextField
-                id="orgName"
-                label="Organization Name"
-                value={name}
-                className="shadow-none"
-                onChange={handleNameChange}
-                placeholder="Acme Inc."
-                error={errors.name?.message || null}
-                labelClassName="text-sm font-medium"
+              <RHF.Controller
+                control={form.control}
+                name="name"
+                render={({ field, fieldState: { error } }) => (
+                  <TextField
+                    id={field.name}
+                    label="Organization Name"
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Acme Inc."
+                    error={error?.message || null}
+                    labelClassName="text-sm font-medium"
+                  />
+                )}
               />
 
-              <TextField
-                id="orgSlug"
-                label="Organization Slug"
-                value={slug}
-                onChange={handleSlugChange}
-                placeholder="acme-inc"
-                error={errors.slug?.message || null}
-                labelClassName="text-sm font-medium"
-                className="font-mono text-sm shadow-none"
+              <RHF.Controller
+                control={form.control}
+                name="slug"
+                render={({ field, fieldState: { error } }) => (
+                  <TextField
+                    id={field.name}
+                    label="Organization Slug"
+                    value={field.value}
+                    onChange={(e) =>
+                      field.onChange(
+                        e
+                          .trim()
+                          .toLowerCase()
+                          .normalize("NFKD")
+                          .replace(/[\u0300-\u036f]/g, "")
+                          .replace(/[^a-z0-9\s-]/g, "")
+                          .replace(/\s+/g, "-")
+                          .replace(/-+/g, "-")
+                          .replace(/^-+|-+$/g, "")
+                      )
+                    }
+                    placeholder="acme-inc"
+                    error={error?.message || null}
+                    className="font-mono text-sm shadow-none"
+                    labelClassName="text-sm font-medium"
+                  />
+                )}
               />
             </CardContent>
           </Card>
 
-          <div
-            className={cn(
-              "flex items-start gap-3 rounded-lg border-none p-4 transition-colors"
-            )}
-          >
-            <div className="flex h-6 items-center pt-0.5">
-              <Checkbox
-                id="terms"
-                checked={agreed}
-                onCheckedChange={(checked) => {
-                  setValue("agreed", checked === true, {
-                    shouldValidate: true,
-                  });
-                }}
+          <RHF.Controller
+            control={form.control}
+            name="agreedToTerms"
+            render={({ field, fieldState: { error } }) => (
+              <div
                 className={cn(
-                  "h-5 w-5 border transition-all",
-                  errors.agreed ? "border-destructive" : "border-primary",
-                  "text-primary focus:ring-primary data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                  "flex items-start gap-3 rounded-lg border-none p-4 transition-colors"
                 )}
-                disabled={isSubmitting}
-                aria-invalid={errors.agreed ? "true" : "false"}
-                aria-describedby={errors.agreed ? "terms-error" : undefined}
-              />
-            </div>
-            <div className="flex-1 space-y-1">
-              <label
-                htmlFor="terms"
-                className="text-foreground block cursor-pointer text-sm leading-relaxed"
-                id="terms-label"
               >
-                I understand the restrictions above and agree to{" "}
-                <span className="text-primary font-medium hover:underline">
-                  Stellar Tools&apos;s terms
-                </span>
-              </label>
-              {errors.agreed && (
-                <p
-                  id="terms-error"
-                  className="text-destructive animate-fade-in mt-1 flex items-center gap-1.5 text-sm"
-                  role="alert"
-                >
-                  <span className="text-xs">•</span>
-                  {errors.agreed.message}
-                </p>
-              )}
-            </div>
-          </div>
+                <div className="flex h-6 items-center pt-0.5">
+                  <Checkbox
+                    id="terms"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    className={cn(
+                      "h-5 w-5 border transition-all",
+                      error ? "border-destructive" : "border-primary",
+                      "text-primary focus:ring-primary data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    )}
+                    disabled={isSubmitting}
+                    aria-invalid={error ? "true" : "false"}
+                    aria-describedby={error ? "terms-error" : undefined}
+                  />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <label
+                    htmlFor="terms"
+                    className="text-foreground block cursor-pointer text-sm leading-relaxed"
+                    id="terms-label"
+                  >
+                    I understand the restrictions above and agree to{" "}
+                    <span className="text-primary font-medium hover:underline">
+                      Stellar Tools&apos;s terms
+                    </span>
+                  </label>
+                  {error && (
+                    <p
+                      id="terms-error"
+                      className="text-destructive animate-fade-in mt-1 flex items-center gap-1.5 text-sm"
+                      role="alert"
+                    >
+                      {error.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          />
 
           <Button
             type="submit"
