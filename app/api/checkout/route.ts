@@ -1,15 +1,19 @@
 import { resolveApiKey } from "@/actions/apikey";
 import { postCheckout } from "@/actions/checkout";
-import { retrieveCustomer } from "@/actions/customers";
+import { postCustomer, retrieveCustomer } from "@/actions/customers";
 import { Checkout, Customer } from "@/db";
 import { schemaFor } from "@/types";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-const postCheckoutSchema = schemaFor<Partial<Checkout>>()(
+const postCheckoutSchema = schemaFor<
+  Partial<Checkout> & { customerEmail?: string }
+>()(
   z.object({
     priceId: z.string(),
     customerId: z.string().optional(),
+    metadata: z.record(z.string(), z.any()).default({}),
+    customerEmail: z.email().optional(),
   })
 );
 
@@ -28,13 +32,24 @@ export const POST = async (req: NextRequest) => {
 
   let customer: Customer | null = null;
 
-  if (data.customerId) {
-    customer = await retrieveCustomer(data.customerId, organizationId);
+  if (data.customerEmail) {
+    customer = await retrieveCustomer(data.customerEmail, organizationId);
   } else {
-    // customer = await postCustomer({ email: data.email, organizationId, environment });
+    customer = await postCustomer({
+      email: data.customerEmail as string,
+      name: data.customerEmail?.split("@")[0],
+      organizationId,
+      environment,
+      ...(data.metadata && { appMetadata: data.metadata }),
+    });
   }
 
-  const checkout = await postCheckout({ organizationId, environment });
+  const checkout = await postCheckout({
+    organizationId,
+    environment,
+    customerId: customer?.id,
+    ...data,
+  });
 
   return NextResponse.json({ data: checkout });
 };

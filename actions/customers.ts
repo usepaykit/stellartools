@@ -5,10 +5,12 @@ import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export const postCustomer = async (params: Partial<Customer>) => {
-  const customer = await db
+  const [customer] = await db
     .insert(customers)
-    .values({ id: nanoid(25), ...params } as Customer)
+    .values({ id: `cu_${nanoid(25)}`, ...params } as Customer)
     .returning();
+
+  if (!customer) throw new Error("Customer not created");
 
   return customer;
 };

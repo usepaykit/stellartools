@@ -5,9 +5,14 @@ import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export const postCheckout = async (params: Partial<Checkout>) => {
+  const isTestnet = params.environment === "testnet";
+
   const [checkout] = await db
     .insert(checkouts)
-    .values({ id: nanoid(25), ...params } as Checkout)
+    .values({
+      id: isTestnet ? `cz_test_${nanoid(25)}` : `cz_main_${nanoid(25)}`,
+      ...params,
+    } as Checkout)
     .returning();
 
   return checkout;

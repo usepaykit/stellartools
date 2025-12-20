@@ -33,6 +33,9 @@ export const accounts = pgTable("account", {
 
 export const organizations = pgTable("organization", {
   id: text("id").primaryKey(),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id),
   name: text("name").notNull(),
   description: text("description"),
   ownerAccountId: text("owner_account_id")
@@ -75,6 +78,25 @@ export const teamMembers = pgTable(
     uniqueOrgAccount: unique().on(table.organizationId, table.accountId),
   })
 );
+
+export const teamInviteStatusEnum = pgEnum("team_invite_status", [
+  "pending",
+  "accepted",
+  "rejected",
+]);
+
+export const teamInvites = pgTable("team_invite", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id),
+  email: text("email").notNull(),
+  status: teamInviteStatusEnum("status").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  metadata: jsonb("metadata").$type<object>().default({}),
+});
 
 export const apiKeys = pgTable("api_key", {
   id: text("id").primaryKey(),
@@ -234,14 +256,23 @@ export const usageRecords = pgTable(
   })
 );
 
+export type WebhookEvent = [
+  "customer.created",
+  "invoice.created",
+  "payment.succeded",
+  "payment.failed",
+];
+
 export const webhooks = pgTable("webhook", {
   id: text("id").primaryKey(),
   organizationId: text("organization_id")
     .notNull()
     .references(() => organizations.id),
   url: text("url").notNull(),
-  secret: text("secret").notNull(),
-  events: jsonb("events").$type<string[]>().notNull(),
+  secretHash: text("secret_hash").notNull(),
+  events: text("events").array().notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
   isDisabled: boolean("is_disabled").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -253,6 +284,9 @@ export const webhookLogs = pgTable("webhook_log", {
   webhookId: text("webhook_id")
     .notNull()
     .references(() => webhooks.id),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id),
   eventType: text("event_type").notNull(),
   payload: jsonb("payload").$type<object>().notNull(),
   statusCode: integer("status_code"),
@@ -275,3 +309,4 @@ export type UsageRecord = InferSelectModel<typeof usageRecords>;
 export type Webhook = InferSelectModel<typeof webhooks>;
 export type WebhookLog = InferSelectModel<typeof webhookLogs>;
 export type Network = (typeof networkEnum.enumValues)[number];
+export type TeamInvite = InferSelectModel<typeof teamInvites>;
