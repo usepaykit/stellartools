@@ -1,9 +1,25 @@
 "use server";
 
-import { Network, Webhook, WebhookLog, db, webhookLogs, webhooks } from "@/db";
-import { hash } from "crypto";
+import { Stellar } from "@/core/stellar";
+import { Webhook as WebhookUtils } from "@/core/webhook";
+import {
+  Checkout,
+  Network,
+  Organization,
+  Webhook,
+  WebhookEvent,
+  WebhookLog,
+  db,
+  webhookLogs,
+  webhooks,
+} from "@/db";
+import { parseJSON } from "@/lib/utils";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { z } from "zod";
+
+import { putCheckout } from "./checkout";
+import { postPayment } from "./payment";
 
 export const postWebhook = async (
   organizationId: string,
@@ -13,7 +29,8 @@ export const postWebhook = async (
     .insert(webhooks)
     .values({
       id: `wh_${nanoid(25)}`,
-      secretHash: hash(nanoid(32), "sha256"),
+      secretHash: `wh_sec_${nanoid(30)}`,
+      isDisabled: false,
       organizationId,
       ...data,
     } as Webhook)
@@ -91,7 +108,7 @@ export const postWebhookLog = async (
 ) => {
   const [webhookLog] = await db
     .insert(webhookLogs)
-    .values({ id: `wh_log_${nanoid(25)}`, webhookId, ...params } as WebhookLog)
+    .values({ webhookId, ...params } as WebhookLog)
     .returning();
 
   if (!webhookLog) throw new Error("Failed to create webhook log");
@@ -173,4 +190,111 @@ export const deleteWebhookLog = async (id: string, organizationId: string) => {
     .returning();
 
   return null;
+};
+
+// -- WEBHOOK INTERNALS --
+
+export const triggerWebhooks = async (
+  organizationId: string,
+  eventType: WebhookEvent,
+  payload: Record<string, unknown>,
+  environment: Network
+) => {
+  const orgWebhooks = await db
+    .select()
+    .from(webhooks)
+    .where(
+      and(
+        eq(webhooks.organizationId, organizationId),
+        eq(webhooks.environment, environment),
+        eq(webhooks.isDisabled, false)
+      )
+    );
+
+  const subscribedWebhooks = orgWebhooks.filter((webhook) =>
+    webhook.events.includes(eventType as unknown as string)
+  );
+
+  if (subscribedWebhooks.length === 0) {
+    console.log(
+      `No webhooks subscribed to ${eventType} for org ${organizationId}`
+    );
+    return { success: true, delivered: 0 };
+  }
+
+  const results = await Promise.allSettled(
+    subscribedWebhooks.map((webhook) =>
+      new WebhookUtils().deliverWebhook(
+        webhook,
+        eventType as unknown as string,
+        payload,
+        environment
+      )
+    )
+  );
+
+  const delivered = results.filter((r) => r.status === "fulfilled").length;
+  const failed = results.filter((r) => r.status === "rejected").length;
+
+  console.log(
+    `Webhooks triggered for ${eventType}: ${delivered} delivered, ${failed} failed`
+  );
+
+  return { success: true, delivered, failed };
+};
+
+// STELLAR
+
+export const processStellarWebhook = async (
+  environment: Network,
+  stellarAccount: NonNullable<Organization["stellarAccounts"]>[Network],
+  organization: Organization,
+  checkout?: Checkout
+) => {
+  const stellar = new Stellar(environment);
+
+  const publicKey = stellarAccount?.public_key;
+
+  if (!publicKey) return { error: "Stellar account not found" };
+
+  stellar.streamTx(publicKey, {
+    onError: (error) => {
+      console.error("Stream error:", error);
+    },
+    onMessage: async (tx) => {
+      const { amount } = parseJSON(
+        tx.memo!,
+        z.object({ amount: z.number(), checkoutId: z.string() })
+      );
+
+      if (checkout) {
+        await Promise.all([
+          putCheckout(checkout.id, organization.id, {
+            status: "completed",
+          }),
+          postPayment({
+            organizationId: organization.id,
+            checkoutId: checkout.id,
+            customerId: checkout.customerId,
+            amount: amount * 10_000_000, // XLM to stroops
+            transactionHash: tx.hash,
+            status: "confirmed",
+            environment,
+            ...(checkout.assetId && { assetId: checkout.assetId }),
+          }),
+        ]);
+
+        await triggerWebhooks(
+          organization.id,
+          "payment.confirmed" as unknown as WebhookEvent,
+          { payment_id: tx.hash, checkout_id: checkout.id },
+          environment
+        );
+      }
+
+      return { data: { checkout } };
+    },
+  });
+
+  return { data: { checkout } };
 };

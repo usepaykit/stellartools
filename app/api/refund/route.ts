@@ -3,10 +3,9 @@ import { retrieveAsset } from "@/actions/asset";
 import { retrieveOrganization } from "@/actions/organization";
 import { retrievePayment } from "@/actions/payment";
 import { postRefund } from "@/actions/refund";
+import { Stellar } from "@/core/stellar";
 import { Refund } from "@/db";
-import { Stellar } from "@/stellar";
 import { schemaFor } from "@/types";
-import * as StellarSDK from "@stellar/stellar-sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -65,24 +64,20 @@ export const POST = async (req: NextRequest) => {
     );
   }
 
-  const horizonServer =
-    environment == "testnet"
-      ? new StellarSDK.Horizon.Server(process.env.STELLAR_TESTNET_HORIZON_URL!)
-      : new StellarSDK.Horizon.Server(process.env.STELLAR_MAINNET_HORIZON_URL!);
+  const stellar = new Stellar(environment);
 
-  const networkPassphrase =
-    environment == "testnet"
-      ? StellarSDK.Networks.TESTNET
-      : StellarSDK.Networks.PUBLIC;
-
-  const stellar = new Stellar(horizonServer, networkPassphrase);
+  const txMemo = JSON.stringify({
+    checkoutId: payment.checkoutId,
+    amount: data.amount,
+  });
 
   const refundResult = await stellar.sendAssetPayment(
     stellarAccount.secret_key,
     data.publicKey,
     asset.code,
     asset.issuer || "",
-    (data.amount / 10_000_000).toString() // Convert stroops to XLM,
+    (data.amount / 10_000_000).toString(), // Convert stroops to XLM,
+    txMemo
   );
 
   if (refundResult.error) {

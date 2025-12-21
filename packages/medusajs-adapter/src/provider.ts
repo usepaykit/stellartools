@@ -85,7 +85,7 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
     }
 
     this.apiClient = new ApiClient({
-      baseUrl: "http://localhost:3000",
+      baseUrl: "https://localhost:3000",
       headers: {
         "Content-Type": "application/json",
         "x-api-key": this.options.apiKey,

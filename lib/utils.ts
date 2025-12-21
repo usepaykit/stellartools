@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { z } from "zod";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -30,4 +31,9 @@ export const isMobile = (): boolean => {
   return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
     window.navigator.userAgent.toLowerCase()
   );
+};
+
+export const parseJSON = <T>(str: string, schema: z.ZodSchema<T>): T => {
+  const parsed = JSON.parse(str);
+  return schema.parse(parsed);
 };

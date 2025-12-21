@@ -1,4 +1,5 @@
 import { ModuleProvider, Modules } from "@medusajs/framework/utils";
+
 import {
   StellarMedusaAdapter,
   type StellarMedusaAdapterOptions,

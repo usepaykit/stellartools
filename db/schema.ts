@@ -166,6 +166,11 @@ export const billingTypeEnum = pgEnum("billing_type", [
   "metered",
 ]);
 
+export const productStatusEnum = pgEnum("product_status", [
+  "active",
+  "archived",
+]);
+
 export const products = pgTable("product", {
   id: text("id").primaryKey(),
   organizationId: text("organization_id")
@@ -173,11 +178,15 @@ export const products = pgTable("product", {
     .references(() => organizations.id),
   name: text("name").notNull(),
   description: text("description"),
+  images: text("images").array(),
+  phoneNumberRequired: boolean("phone_number_required")
+    .default(false)
+    .notNull(),
+  status: productStatusEnum("status").notNull(),
   assetId: text("asset_id")
     .notNull()
     .references(() => assets.id),
   billingType: billingTypeEnum("billing_type").notNull(),
-  active: boolean("active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object>().default({}),
@@ -202,7 +211,7 @@ export const checkouts = pgTable(
     customerId: text("customer_id").references(() => customers.id),
     productId: text("product_id").references(() => products.id),
     amount: integer("amount"),
-    assetCode: text("asset_code").default("XLM"),
+    assetId: text("asset_id").references(() => assets.id),
     description: text("description"),
     status: checkoutStatusEnum("status").notNull(),
     paymentUrl: text("payment_url").notNull(),
@@ -273,9 +282,15 @@ export const usageRecords = pgTable(
 
 export type WebhookEvent = [
   "customer.created",
-  "invoice.created",
-  "payment.succeded",
+  "customer.updated",
+  "customer.deleted",
+  "checkout.created",
+  "payment.pending",
+  "payment.confirmed",
   "payment.failed",
+  "refund.created",
+  "refund.succeeded",
+  "refund.failed",
 ];
 
 export const webhooks = pgTable("webhook", {
