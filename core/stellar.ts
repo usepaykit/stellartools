@@ -1,33 +1,51 @@
+import { Network } from "@/db";
 import { ApiResponse } from "@/types";
 import * as StellarSDK from "@stellar/stellar-sdk";
 
 export class Stellar {
-  constructor(
-    private server: StellarSDK.Horizon.Server,
-    private networkPassphrase: StellarSDK.Networks
-  ) {}
+  constructor(private network: Network) {}
+
+  private getServerAndNetwork() {
+    if (this.network == "testnet") {
+      return {
+        networkPassphrase: StellarSDK.Networks.TESTNET,
+        server: new StellarSDK.Horizon.Server(
+          process.env.STELLAR_TESTNET_HORIZON_URL!
+        ),
+      };
+    } else {
+      return {
+        networkPassphrase: StellarSDK.Networks.PUBLIC,
+        server: new StellarSDK.Horizon.Server(
+          process.env.STELLAR_MAINNET_HORIZON_URL!
+        ),
+      };
+    }
+  }
 
   async createAccount(
     sourceSecret: string,
     destinationPublicKey: string,
     startingBalance: string
   ): Promise<ApiResponse<StellarSDK.Horizon.AccountResponse | null>> {
-    if (this.networkPassphrase == StellarSDK.Networks.TESTNET) {
+    const { networkPassphrase, server } = this.getServerAndNetwork();
+
+    if (networkPassphrase == StellarSDK.Networks.TESTNET) {
       const keypair = StellarSDK.Keypair.random();
 
       await fetch(`https://friendbot.stellar.org/?addr=${keypair.publicKey()}`);
 
-      const account = await this.server.loadAccount(keypair.publicKey());
+      const account = await server.loadAccount(keypair.publicKey());
 
       return { data: account, error: undefined };
     }
 
     const sourceKeypair = StellarSDK.Keypair.fromSecret(sourceSecret);
-    const account = await this.server.loadAccount(sourceKeypair.publicKey());
+    const account = await server.loadAccount(sourceKeypair.publicKey());
 
     const transaction = new StellarSDK.TransactionBuilder(account, {
       fee: StellarSDK.BASE_FEE,
-      networkPassphrase: this.networkPassphrase,
+      networkPassphrase,
     })
       .addOperation(
         StellarSDK.Operation.createAccount({
@@ -40,7 +58,7 @@ export class Stellar {
 
     transaction.sign(sourceKeypair);
 
-    await this.server.submitTransaction(transaction);
+    await server.submitTransaction(transaction);
 
     return { data: account };
   }
@@ -56,13 +74,14 @@ export class Stellar {
     >
   > {
     try {
+      const { networkPassphrase, server } = this.getServerAndNetwork();
       const sourceKeypair = StellarSDK.Keypair.fromSecret(sourceSecret);
 
-      const account = await this.server.loadAccount(sourceKeypair.publicKey());
+      const account = await server.loadAccount(sourceKeypair.publicKey());
 
       const transaction = new StellarSDK.TransactionBuilder(account, {
         fee: StellarSDK.BASE_FEE,
-        networkPassphrase: this.networkPassphrase,
+        networkPassphrase,
       })
         .addOperation(
           StellarSDK.Operation.createAccount({
@@ -74,7 +93,7 @@ export class Stellar {
         .build();
 
       transaction.sign(sourceKeypair);
-      const result = await this.server.submitTransaction(transaction);
+      const result = await server.submitTransaction(transaction);
 
       return { data: result };
     } catch (error) {
@@ -88,7 +107,8 @@ export class Stellar {
   retrieveAccount = async (
     publicKey: string
   ): Promise<ApiResponse<StellarSDK.Horizon.AccountResponse | null>> => {
-    const account = await this.server.loadAccount(publicKey);
+    const { server } = this.getServerAndNetwork();
+    const account = await server.loadAccount(publicKey);
     return { data: account, error: undefined };
   };
 
@@ -99,7 +119,8 @@ export class Stellar {
   ): Promise<
     ApiResponse<StellarSDK.Horizon.ServerApi.CollectionPage<StellarSDK.Horizon.ServerApi.TransactionRecord> | null>
   > => {
-    const query = this.server.transactions().forAccount(accountId);
+    const { server } = this.getServerAndNetwork();
+    const query = server.transactions().forAccount(accountId);
 
     if (cursor) {
       query.cursor(cursor);
@@ -121,7 +142,8 @@ export class Stellar {
     limit: number = 20,
     cursor?: string
   ) => {
-    const query = this.server.payments().forAccount(accountId);
+    const { server } = this.getServerAndNetwork();
+    const query = server.payments().forAccount(accountId);
 
     if (cursor) {
       query.cursor(cursor);
@@ -138,6 +160,32 @@ export class Stellar {
     return { data: payments };
   };
 
+  retrieveTx = async (
+    transactionHash: string
+  ): Promise<
+    ApiResponse<StellarSDK.Horizon.ServerApi.TransactionRecord | null>
+  > => {
+    const { server } = this.getServerAndNetwork();
+
+    const transaction = await server
+      .transactions()
+      .transaction(transactionHash)
+      .call();
+
+    return { data: transaction };
+  };
+
+  retrievePayment = async (transactionHash: string) => {
+    const { server } = this.getServerAndNetwork();
+
+    const payment = await server
+      .payments()
+      .forTransaction(transactionHash)
+      .call();
+
+    return { data: payment };
+  };
+
   sendAssetPayment = async (
     sourceSecret: string,
     destinationPublicKey: string,
@@ -145,10 +193,18 @@ export class Stellar {
     assetIssuer: string,
     amount: string,
     memo?: string
-  ): Promise<ApiResponse<unknown, string>> => {
+  ): Promise<
+    ApiResponse<
+      StellarSDK.Horizon.HorizonApi.SubmitTransactionResponse | null,
+      string
+    >
+  > => {
     try {
       const keypair = StellarSDK.Keypair.fromSecret(sourceSecret);
-      const account = await this.server.loadAccount(keypair.publicKey());
+
+      const { server, networkPassphrase } = this.getServerAndNetwork();
+
+      const account = await server.loadAccount(keypair.publicKey());
 
       const asset =
         assetCode === "XLM"
@@ -157,7 +213,7 @@ export class Stellar {
 
       const txBuilder = new StellarSDK.TransactionBuilder(account, {
         fee: StellarSDK.BASE_FEE,
-        networkPassphrase: this.networkPassphrase,
+        networkPassphrase,
       }).addOperation(
         StellarSDK.Operation.payment({
           destination: destinationPublicKey,
@@ -172,7 +228,7 @@ export class Stellar {
 
       const transaction = txBuilder.setTimeout(30).build();
       transaction.sign(keypair);
-      const result = await this.server.submitTransaction(transaction);
+      const result = await server.submitTransaction(transaction);
 
       return { data: result };
     } catch (error) {
@@ -181,5 +237,23 @@ export class Stellar {
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }
+  };
+
+  streamTx = (
+    publicKey: string,
+    evts: {
+      onError: (event: MessageEvent) => void;
+      onMessage: (
+        event: StellarSDK.Horizon.ServerApi.TransactionRecord
+      ) => void;
+    }
+  ): (() => void) => {
+    const { server } = this.getServerAndNetwork();
+
+    return server
+      .transactions()
+      .forAccount(publicKey)
+      .cursor("now")
+      .stream({ onerror: evts.onError, onmessage: evts.onMessage });
   };
 }

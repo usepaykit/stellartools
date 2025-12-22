@@ -1,0 +1,36 @@
+{
+  "name": "@stellar-tools/medusajs-adapter",
+  "version": "0.0.1",
+  "description": "Stellar Tools MedusaJS Adapter",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "keywords": [
+    "stellar",
+    "medusajs",
+    "adapter"
+  ],
+  "author": "Emmanuel Odii",
+  "license": "ISC",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/usepaykit/stellar-tools.git"
+  },
+  "bugs": {
+    "url": "https://github.com/usepaykit/stellar-tools/issues"
+  },
+  "dependencies": {
+    "@medusajs/framework": "^2.12.3"
+  }
+}

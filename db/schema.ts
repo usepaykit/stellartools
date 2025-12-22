@@ -1,6 +1,7 @@
-import { InferSelectModel } from "drizzle-orm";
+import { InferSelectModel, sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -33,6 +34,9 @@ export const accounts = pgTable("account", {
 
 export const organizations = pgTable("organization", {
   id: text("id").primaryKey(),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id),
   name: text("name").notNull(),
   description: text("description"),
   ownerAccountId: text("owner_account_id")
@@ -43,9 +47,11 @@ export const organizations = pgTable("organization", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object>().default({}),
   environment: networkEnum("network").notNull(),
-  stellar_account: jsonb("stellar_account").$type<{
-    testnet: { public_key: string; secret_key_hash: string };
-    mainnet: { public_key: string; secret_key_hash: string };
+  stellarAccounts: jsonb("stellar_account").$type<{
+    [K in (typeof networkEnum.enumValues)[number]]: {
+      public_key: string;
+      secret_key: string;
+    };
   }>(),
 });
 
@@ -75,6 +81,25 @@ export const teamMembers = pgTable(
     uniqueOrgAccount: unique().on(table.organizationId, table.accountId),
   })
 );
+
+export const teamInviteStatusEnum = pgEnum("team_invite_status", [
+  "pending",
+  "accepted",
+  "rejected",
+]);
+
+export const teamInvites = pgTable("team_invite", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id),
+  email: text("email").notNull(),
+  status: teamInviteStatusEnum("status").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  metadata: jsonb("metadata").$type<object>().default({}),
+});
 
 export const apiKeys = pgTable("api_key", {
   id: text("id").primaryKey(),
@@ -141,6 +166,11 @@ export const billingTypeEnum = pgEnum("billing_type", [
   "metered",
 ]);
 
+export const productStatusEnum = pgEnum("product_status", [
+  "active",
+  "archived",
+]);
+
 export const products = pgTable("product", {
   id: text("id").primaryKey(),
   organizationId: text("organization_id")
@@ -148,15 +178,25 @@ export const products = pgTable("product", {
     .references(() => organizations.id),
   name: text("name").notNull(),
   description: text("description"),
+  images: text("images").array(),
+  phoneNumberRequired: boolean("phone_number_required")
+    .default(false)
+    .notNull(),
+  status: productStatusEnum("status").notNull(),
   assetId: text("asset_id")
     .notNull()
     .references(() => assets.id),
   billingType: billingTypeEnum("billing_type").notNull(),
-  active: boolean("active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object>().default({}),
   environment: networkEnum("network").notNull(),
+
+  // Metered billing
+  unit: text("unit"), // e.g., "tokens", "MB", "requests", "images", "minutes"
+  unitsPerCredit: integer("units_per_credit").default(1), // if 1, 1 unit = 1 credit, if 10, 10 units = 1 credit
+  creditsGranted: integer("credits_granted"),
+  creditExpiryDays: integer("credit_expiry_days"),
 });
 
 export const checkoutStatusEnum = pgEnum("checkout_status", [
@@ -166,22 +206,34 @@ export const checkoutStatusEnum = pgEnum("checkout_status", [
   "failed",
 ]);
 
-export const checkouts = pgTable("checkout", {
-  id: text("id").primaryKey(),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organizations.id),
-  apiKeyId: text("api_key_id").references(() => apiKeys.id),
-  customerId: text("customer_id").references(() => customers.id),
-  priceId: text("price_id").notNull(),
-  status: checkoutStatusEnum("status").notNull(),
-  paymentUrl: text("payment_url").notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  metadata: jsonb("metadata").$type<object>().default({}),
-  environment: networkEnum("network").notNull(),
-});
+export const checkouts = pgTable(
+  "checkout",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    apiKeyId: text("api_key_id").references(() => apiKeys.id),
+    customerId: text("customer_id").references(() => customers.id),
+    productId: text("product_id").references(() => products.id),
+    amount: integer("amount"),
+    assetId: text("asset_id").references(() => assets.id),
+    description: text("description"),
+    status: checkoutStatusEnum("status").notNull(),
+    paymentUrl: text("payment_url").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    metadata: jsonb("metadata").$type<object>().default({}),
+    environment: networkEnum("network").notNull(),
+  },
+  (table) => ({
+    amountOrProductCheck: check(
+      "amount_or_product_check",
+      sql`${table.productId} IS NOT NULL OR ${table.amount} IS NOT NULL`
+    ),
+  })
+);
 
 export const paymentStatusEnum = pgEnum("payment_status", [
   "pending",
@@ -207,6 +259,8 @@ export const payments = pgTable("payment", {
   environment: networkEnum("network").notNull(),
 });
 
+export const featureEnum = pgEnum("feature", ["aisdk", "uploadthing"]);
+
 export const usageRecords = pgTable(
   "usage_record",
   {
@@ -218,12 +272,13 @@ export const usageRecords = pgTable(
       .notNull()
       .references(() => apiKeys.id),
     customerId: text("customer_id").references(() => customers.id),
-    feature: text("feature").notNull(),
-    quantity: integer("quantity").notNull(),
+    feature: featureEnum("feature").notNull(),
+    quantity: integer("quantity").notNull(), // Number of units consumed
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     metadata: jsonb("metadata").$type<object>().default({}),
     environment: networkEnum("network").notNull(),
+    aisdk: jsonb("aisdk"),
   },
   (table) => ({
     orgFeatureCreatedIdx: index("usage_records_org_feature_created_idx").on(
@@ -234,14 +289,29 @@ export const usageRecords = pgTable(
   })
 );
 
+export type WebhookEvent = [
+  "customer.created",
+  "customer.updated",
+  "customer.deleted",
+  "checkout.created",
+  "payment.pending",
+  "payment.confirmed",
+  "payment.failed",
+  "refund.created",
+  "refund.succeeded",
+  "refund.failed",
+];
+
 export const webhooks = pgTable("webhook", {
   id: text("id").primaryKey(),
   organizationId: text("organization_id")
     .notNull()
     .references(() => organizations.id),
   url: text("url").notNull(),
-  secret: text("secret").notNull(),
-  events: jsonb("events").$type<string[]>().notNull(),
+  secretHash: text("secret_hash").notNull(),
+  events: text("events").array().notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
   isDisabled: boolean("is_disabled").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -253,6 +323,9 @@ export const webhookLogs = pgTable("webhook_log", {
   webhookId: text("webhook_id")
     .notNull()
     .references(() => webhooks.id),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id),
   eventType: text("event_type").notNull(),
   payload: jsonb("payload").$type<object>().notNull(),
   statusCode: integer("status_code"),
@@ -261,6 +334,63 @@ export const webhookLogs = pgTable("webhook_log", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   environment: networkEnum("network").notNull(),
 });
+
+export const refundStatusEnum = pgEnum("refund_status", [
+  "pending",
+  "succeeded",
+  "failed",
+]);
+
+export const refunds = pgTable("refund", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id),
+  paymentId: text("payment_id")
+    .notNull()
+    .references(() => payments.id),
+  customerId: text("customer_id").references(() => customers.id),
+  assetId: text("asset_id").references(() => assets.id),
+  amount: integer("amount").notNull(),
+  transactionHash: text("tx_hash").notNull().unique(),
+  reason: text("reason"),
+  status: refundStatusEnum("status").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  environment: networkEnum("network").notNull(),
+  metadata: jsonb("metadata").$type<object>().default({}),
+});
+
+export const creditBalances = pgTable(
+  "credit_balance",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    customerId: text("customer_id").references(() => customers.id),
+    productId: text("product_id").references(() => products.id),
+    environment: networkEnum("network").notNull(),
+    metadata: jsonb("metadata").$type<object>(),
+    balance: integer("balance").notNull().default(0),
+    consumed: integer("consumed").notNull().default(0),
+    granted: integer("granted").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    // One balance per customer per product
+    uniqueCustomerProduct: unique().on(
+      table.customerId,
+      table.productId,
+      table.environment
+    ),
+    balanceIndex: index("credit_balance_customer_idx").on(
+      table.customerId,
+      table.organizationId
+    ),
+  })
+);
 
 export type Account = InferSelectModel<typeof accounts>;
 export type Organization = InferSelectModel<typeof organizations>;
@@ -274,3 +404,7 @@ export type Payment = InferSelectModel<typeof payments>;
 export type UsageRecord = InferSelectModel<typeof usageRecords>;
 export type Webhook = InferSelectModel<typeof webhooks>;
 export type WebhookLog = InferSelectModel<typeof webhookLogs>;
+export type Network = (typeof networkEnum.enumValues)[number];
+export type TeamInvite = InferSelectModel<typeof teamInvites>;
+export type Refund = InferSelectModel<typeof refunds>;
+export type CreditBalance = InferSelectModel<typeof creditBalances>;

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast";
+import { WebhookEvent } from "@/db";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import * as RHF from "react-hook-form";
@@ -50,9 +51,7 @@ const WEBHOOK_EVENTS = [
   { id: "invoice.created", label: "Invoice Created" },
   { id: "payment.succeded", label: "Payment Succeeded" },
   { id: "payment.failed", label: "Payment Failed" },
-] as const;
-
-export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number]["id"];
+] as const satisfies { id: WebhookEvent[number]; label: string }[];
 
 export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);

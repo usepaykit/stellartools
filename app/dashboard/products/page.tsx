@@ -10,7 +10,11 @@ import {
   type FileWithPreview,
 } from "@/components/file-upload-picker";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { TextAreaField, TextField } from "@/components/input-picker";
+import {
+  NumberPicker,
+  TextAreaField,
+  TextField,
+} from "@/components/input-picker";
 import { PricePicker } from "@/components/price-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -66,10 +70,9 @@ const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   images: z.array(z.any()).transform((val) => val as FileWithPreview[]),
-  billingCycle: z.enum(["one-time", "recurring"]),
+  billingCycle: z.enum(["one-time", "recurring", "metered"]),
   recurringInterval: z.number().min(1).optional(),
   recurringPeriod: z.enum(["day", "week", "month", "year"]).optional(),
-  pricingModel: z.enum(["fixed", "tiered", "usage"]),
   price: z.object({
     amount: z
       .string()
@@ -81,6 +84,11 @@ const productSchema = z.object({
     asset: z.string().min(1, "Asset is required"),
   }),
   phoneNumberEnabled: z.boolean(),
+
+  unit: z.string().optional(), // Freeform text
+  unitsPerCredit: z.number().min(1).default(1).optional(),
+  creditsGranted: z.number().min(1).optional(),
+  creditExpiryDays: z.number().min(1).optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -510,46 +518,131 @@ function ProductsModal({
                       One-off
                     </Label>
                   </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="metered" id="metered" />
+                    <Label htmlFor="metered" className="font-normal">
+                      Metered (Credits)
+                    </Label>
+                  </div>
                 </RadioGroup>
               )}
             />
 
-            <RHF.Controller
-              control={form.control}
-              name="price"
-              render={({ field }) => (
-                <PricePicker
-                  id="price"
-                  value={field.value}
-                  onChange={field.onChange}
-                  assets={["XLM", "USDC"]}
-                  error={form.formState.errors.price?.amount?.message}
-                />
-              )}
-            />
+            {watched.billingCycle === "metered" && (
+              <div className="space-y-4 rounded-lg border p-4">
+                <div className="space-y-1">
+                  <h4 className="text-sm font-semibold">
+                    Credit Configuration
+                  </h4>
+                </div>
 
-            {watched.billingCycle == "recurring" && (
+                <RHF.Controller
+                  control={form.control}
+                  name="unit"
+                  render={({ field, fieldState: { error } }) => (
+                    <NumberPicker
+                      {...field}
+                      value={field.value || 0}
+                      id="unit"
+                      label="Unit Type"
+                      placeholder="e.g., tokens, MB, requests, images"
+                      helpText="What does 1 credit represent?"
+                      error={error?.message}
+                    />
+                  )}
+                />
+
+                <RHF.Controller
+                  control={form.control}
+                  name="unitsPerCredit"
+                  render={({ field, fieldState: { error } }) => (
+                    <NumberPicker
+                      {...field}
+                      value={field.value || 0}
+                      id="unitsPerCredit"
+                      label="Units per Credit"
+                      helpText="How many units equal 1 credit?"
+                      error={error?.message}
+                    />
+                  )}
+                />
+
+                <RHF.Controller
+                  control={form.control}
+                  name="creditsGranted"
+                  render={({ field, fieldState: { error } }) => (
+                    <NumberPicker
+                      {...field}
+                      value={field.value || 0}
+                      id="creditsGranted"
+                      label="Credits Granted"
+                      placeholder="e.g., 10000"
+                      helpText={
+                        watched.unit && watched.unitsPerCredit
+                          ? `= ${(watched.creditsGranted || 0) * watched.unitsPerCredit} ${watched.unit}`
+                          : "Total credits included in this product"
+                      }
+                      error={error?.message}
+                    />
+                  )}
+                />
+
+                <RHF.Controller
+                  control={form.control}
+                  name="creditExpiryDays"
+                  render={({ field, fieldState: { error } }) => (
+                    <NumberPicker
+                      {...field}
+                      value={field.value || 0}
+                      id="creditExpiryDays"
+                      label="Expiry (days)"
+                      helpText="Credits expire after X days"
+                      error={error?.message}
+                    />
+                  )}
+                />
+              </div>
+            )}
+
+            <div className="flex gap-2">
               <RHF.Controller
                 control={form.control}
-                name="recurringPeriod"
+                name="price"
                 render={({ field }) => (
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="day">Daily</SelectItem>
-                      <SelectItem value="week">Weekly</SelectItem>
-                      <SelectItem value="month">Monthly</SelectItem>
-                      <SelectItem value="year">Yearly</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <PricePicker
+                    id="price"
+                    className="flex-1"
+                    value={field.value}
+                    onChange={field.onChange}
+                    assets={["XLM", "USDC"]}
+                    error={form.formState.errors.price?.amount?.message}
+                  />
                 )}
               />
-            )}
+
+              {watched.billingCycle == "recurring" && (
+                <RHF.Controller
+                  control={form.control}
+                  name="recurringPeriod"
+                  render={({ field }) => (
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <SelectTrigger className="mt-2.5 h-12 w-[150px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="day">Daily</SelectItem>
+                        <SelectItem value="week">Weekly</SelectItem>
+                        <SelectItem value="month">Monthly</SelectItem>
+                        <SelectItem value="year">Yearly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              )}
+            </div>
           </div>
 
           <div className="flex items-center justify-between border-t pt-4">
