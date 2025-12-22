@@ -191,6 +191,12 @@ export const products = pgTable("product", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object>().default({}),
   environment: networkEnum("network").notNull(),
+
+  // Metered billing
+  unit: text("unit"), // e.g., "tokens", "MB", "requests", "images", "minutes"
+  unitsPerCredit: integer("units_per_credit").default(1), // if 1, 1 unit = 1 credit, if 10, 10 units = 1 credit
+  creditsGranted: integer("credits_granted"),
+  creditExpiryDays: integer("credit_expiry_days"),
 });
 
 export const checkoutStatusEnum = pgEnum("checkout_status", [
@@ -253,6 +259,8 @@ export const payments = pgTable("payment", {
   environment: networkEnum("network").notNull(),
 });
 
+export const featureEnum = pgEnum("feature", ["aisdk", "uploadthing"]);
+
 export const usageRecords = pgTable(
   "usage_record",
   {
@@ -264,12 +272,13 @@ export const usageRecords = pgTable(
       .notNull()
       .references(() => apiKeys.id),
     customerId: text("customer_id").references(() => customers.id),
-    feature: text("feature").notNull(),
-    quantity: integer("quantity").notNull(),
+    feature: featureEnum("feature").notNull(),
+    quantity: integer("quantity").notNull(), // Number of units consumed
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     metadata: jsonb("metadata").$type<object>().default({}),
     environment: networkEnum("network").notNull(),
+    aisdk: jsonb("aisdk"),
   },
   (table) => ({
     orgFeatureCreatedIdx: index("usage_records_org_feature_created_idx").on(
@@ -352,6 +361,37 @@ export const refunds = pgTable("refund", {
   metadata: jsonb("metadata").$type<object>().default({}),
 });
 
+export const creditBalances = pgTable(
+  "credit_balance",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    customerId: text("customer_id").references(() => customers.id),
+    productId: text("product_id").references(() => products.id),
+    environment: networkEnum("network").notNull(),
+    metadata: jsonb("metadata").$type<object>(),
+    balance: integer("balance").notNull().default(0),
+    consumed: integer("consumed").notNull().default(0),
+    granted: integer("granted").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    // One balance per customer per product
+    uniqueCustomerProduct: unique().on(
+      table.customerId,
+      table.productId,
+      table.environment
+    ),
+    balanceIndex: index("credit_balance_customer_idx").on(
+      table.customerId,
+      table.organizationId
+    ),
+  })
+);
+
 export type Account = InferSelectModel<typeof accounts>;
 export type Organization = InferSelectModel<typeof organizations>;
 export type TeamMember = InferSelectModel<typeof teamMembers>;
@@ -367,3 +407,4 @@ export type WebhookLog = InferSelectModel<typeof webhookLogs>;
 export type Network = (typeof networkEnum.enumValues)[number];
 export type TeamInvite = InferSelectModel<typeof teamInvites>;
 export type Refund = InferSelectModel<typeof refunds>;
+export type CreditBalance = InferSelectModel<typeof creditBalances>;

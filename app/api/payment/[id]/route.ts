@@ -16,12 +16,15 @@ export const GET = async (req: NextRequest, params: { id: string }) => {
   const payment = await retrievePayment(id, organizationId);
 
   // Refresh payment status, mostly needed by adapters to get the latest status.
-  await refreshTxStatus(
-    id,
-    payment.transactionHash,
-    organizationId,
-    environment
-  );
+
+  if (payment.status === "pending") {
+    await refreshTxStatus(
+      id,
+      payment.transactionHash,
+      organizationId,
+      environment
+    );
+  }
 
   return NextResponse.json({ data: payment });
 };
