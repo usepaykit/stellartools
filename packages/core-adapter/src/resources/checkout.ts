@@ -6,7 +6,7 @@ import {
   createCheckoutSchema,
   updateCheckoutSchema,
 } from "../schema/checkout";
-import { ERR, OK, buildError, tryCatchAsync } from "../utils";
+import { tryCatchAsync } from "../utils";
 
 export class CheckoutApi {
   constructor(private apiClient: ApiClient) {}
@@ -40,14 +40,14 @@ export class CheckoutApi {
       throw new Error(`Invalid parameters: ${error.message}`);
     }
 
-    return OK(response);
+    return response;
   };
 
   update = async (id: string, params: UpdateCheckout) => {
     const { error, data } = updateCheckoutSchema.safeParse(params);
 
     if (error) {
-      return ERR(buildError(`Invalid parameters: ${error.message}`, error));
+      throw new Error(`Invalid parameters: ${error.message}`);
     }
 
     const [response, checkoutError] = await tryCatchAsync(
@@ -72,6 +72,6 @@ export class CheckoutApi {
       throw new Error(`Failed to delete checkout: ${error.message}`);
     }
 
-    return OK(response);
+    return response;
   };
 }
