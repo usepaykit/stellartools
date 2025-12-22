@@ -1,4 +1,3 @@
-// src/billing.ts
 export async function checkBilling({
   apiKey,
   customerId,

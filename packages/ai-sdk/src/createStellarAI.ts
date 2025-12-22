@@ -1,4 +1,3 @@
-// src/createStellarAI.ts
 import { EmbeddingModel, LanguageModel, generateText, streamText, generateObject, streamObject, StreamObjectResult } from "ai";
 import { checkBilling } from "./billings";
 import { CheckoutResult } from "./types";
