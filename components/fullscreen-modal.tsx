@@ -110,10 +110,8 @@ export const FullScreenModal = ({
               </DialogHeader>
 
               {/* Content - Scrollable */}
-              <ScrollArea
-                className={cn(" flex-1", scrollArea.className)}
-              >
-                <div className="px-6 py-6 h-[200px]">{children}</div>
+              <ScrollArea className={cn("flex-1", scrollArea.className)}>
+                <div className="h-[200px] px-6 py-6">{children}</div>
               </ScrollArea>
 
               {/* Footer - Sticky */}
