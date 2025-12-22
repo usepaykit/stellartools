@@ -280,7 +280,6 @@ export const processStellarWebhook = async (
             transactionHash: tx.hash,
             status: "confirmed",
             environment,
-            ...(checkout.assetId && { assetId: checkout.assetId }),
           }),
         ]);
 

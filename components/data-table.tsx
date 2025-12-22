@@ -45,7 +45,6 @@ interface DataTableProps<TData, TValue>
     MixinProps<"row", React.ComponentProps<typeof TableRow>>,
     MixinProps<"checkbox", React.ComponentProps<typeof Checkbox>>,
     MixinProps<"body", React.ComponentProps<typeof TableBody>>,
-    MixinProps<"head", React.ComponentProps<typeof TableHead>>,
     MixinProps<"cell", React.ComponentProps<typeof TableCell>> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
@@ -65,7 +64,7 @@ export function DataTable<TData, TValue>({
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
 
-  const { row, checkbox, body, head, cell, ...rest } = splitProps(
+  const { row, checkbox, body, cell, ...rest } = splitProps(
     mixProps,
     "row",
     "checkbox",
