@@ -98,33 +98,26 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
       console.info("[Stellar] Initiating payment", { amount, currency_code });
     }
 
-    try {
-      const checkout = await this.stellar.checkout.create({
-        amount: Number(amount),
-        assetCode: currency_code,
-        metadata: data?.metadata as Record<string, unknown>,
-        description: (data?.description as string) ?? "Payment for order",
-        customerId: context?.customer?.id as string,
-      });
+    const checkout = await this.stellar.checkout.create({
+      amount: Number(amount),
+      assetCode: currency_code,
+      metadata: data?.metadata as Record<string, unknown>,
+      description: (data?.description as string) ?? "Payment for order",
+      customerId: context?.customer?.id as string,
+    });
 
-      if (!checkout.ok) {
-        throw new MedusaError(
-          MedusaError.Types.UNEXPECTED_STATE,
-          checkout.error?.message ?? "Failed to create checkout"
-        );
-      }
-
-      return {
-        id: checkout.value.id,
-        status: PaymentSessionStatus.REQUIRES_MORE,
-        data: { payment_url: checkout.value.paymentUrl },
-      };
-    } catch (error) {
+    if (!checkout.ok) {
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
-        error instanceof Error ? error.message : "Failed to create checkout"
+        checkout.error?.message ?? "Failed to create checkout"
       );
     }
+
+    return {
+      id: checkout.value.id,
+      status: PaymentSessionStatus.REQUIRES_MORE,
+      data: { payment_url: checkout.value.paymentUrl },
+    };
   };
 
   capturePayment = async (): Promise<CapturePaymentOutput> => {
@@ -174,34 +167,27 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
       (message) => new MedusaError(MedusaError.Types.INVALID_DATA, message)
     );
 
-    try {
-      const payment = await this.stellar.payment.retrieve(paymentId, {
-        verifyOnChain: true,
-      });
+    const payment = await this.stellar.payment.retrieve(paymentId, {
+      verifyOnChain: true,
+    });
 
-      if (!payment.ok) {
-        throw new MedusaError(
-          MedusaError.Types.UNEXPECTED_STATE,
-          payment.error?.message ?? "Failed to retrieve payment"
-        );
-      }
-
-      const statusMap: Record<string, PaymentSessionStatus> = {
-        pending: PaymentSessionStatus.REQUIRES_MORE,
-        confirmed: PaymentSessionStatus.AUTHORIZED,
-        failed: PaymentSessionStatus.ERROR,
-      };
-
-      return {
-        status: statusMap[payment.value.status] || PaymentSessionStatus.PENDING,
-        data: payment.value as unknown as Record<string, unknown>,
-      };
-    } catch (error) {
+    if (!payment.ok) {
       throw new MedusaError(
-        MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        error instanceof Error ? error.message : "Failed to get payment status"
+        MedusaError.Types.UNEXPECTED_STATE,
+        payment.error?.message ?? "Failed to retrieve payment"
       );
     }
+
+    const statusMap: Record<string, PaymentSessionStatus> = {
+      pending: PaymentSessionStatus.REQUIRES_MORE,
+      confirmed: PaymentSessionStatus.AUTHORIZED,
+      failed: PaymentSessionStatus.ERROR,
+    };
+
+    return {
+      status: statusMap[payment.value.status] || PaymentSessionStatus.PENDING,
+      data: payment.value as unknown as Record<string, unknown>,
+    };
   };
 
   refundPayment = async (
@@ -218,22 +204,22 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
       (message) => new MedusaError(MedusaError.Types.INVALID_DATA, message)
     );
 
-    try {
-      const refund = await this.stellar.refund.create({
-        paymentId,
-        amount: Number(input.amount),
-        reason: (input.data?.reason as string) ?? "Refund for order",
-        metadata: (input.data?.metadata as Record<string, unknown>) ?? {},
-        receiverPublicKey,
-      });
+    const refund = await this.stellar.refund.create({
+      paymentId,
+      amount: Number(input.amount),
+      reason: (input.data?.reason as string) ?? "Refund for order",
+      metadata: (input.data?.metadata as Record<string, unknown>) ?? {},
+      receiverPublicKey,
+    });
 
-      return { data: refund as Record<string, unknown> };
-    } catch (error) {
+    if (!refund.ok) {
       throw new MedusaError(
-        MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        error instanceof Error ? error.message : "Failed to create refund"
+        MedusaError.Types.UNEXPECTED_STATE,
+        refund.error?.message ?? "Failed to create refund"
       );
     }
+
+    return { data: refund as Record<string, unknown> };
   };
 
   retrievePayment = async (
@@ -316,31 +302,24 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
         ? (data.metadata as Record<string, unknown>)
         : {};
 
-    try {
-      const stellarCustomer = await this.stellar.customer.create({
-        email: customer?.email,
-        name: `${customer?.first_name} ${customer?.last_name}`,
-        phone: customer?.phone ?? undefined,
-        appMetadata: { source: "medusa-adapter", ...(metadata ?? {}) },
-      });
+    const stellarCustomer = await this.stellar.customer.create({
+      email: customer?.email,
+      name: `${customer?.first_name} ${customer?.last_name}`,
+      phone: customer?.phone ?? undefined,
+      appMetadata: { source: "medusa-adapter", ...(metadata ?? {}) },
+    });
 
-      if (!stellarCustomer.ok) {
-        throw new MedusaError(
-          MedusaError.Types.UNEXPECTED_STATE,
-          stellarCustomer.error?.message ?? "Failed to create customer"
-        );
-      }
-
-      return {
-        id: stellarCustomer.value.id,
-        data: stellarCustomer.value as unknown as Record<string, unknown>,
-      };
-    } catch (error) {
+    if (!stellarCustomer.ok) {
       throw new MedusaError(
-        MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        error instanceof Error ? error.message : "Failed to create customer"
+        MedusaError.Types.UNEXPECTED_STATE,
+        stellarCustomer.error?.message ?? "Failed to create customer"
       );
     }
+
+    return {
+      id: stellarCustomer.value.id,
+      data: stellarCustomer.value as unknown as Record<string, unknown>,
+    };
   };
 
   updateAccountHolder = async ({
@@ -362,24 +341,26 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
       );
     }
 
-    try {
-      const updatedCustomer = await this.stellar.customer.update(
-        accountHolderId,
-        {
-          email: customer.email,
-          name: `${customer.first_name} ${customer.last_name}`,
-          phone: customer.phone ?? undefined,
-          appMetadata: data?.metadata as Record<string, unknown>,
-        }
-      );
+    const updatedCustomer = await this.stellar.customer.update(
+      accountHolderId,
+      {
+        email: customer.email,
+        name: `${customer.first_name} ${customer.last_name}`,
+        phone: customer.phone ?? undefined,
+        appMetadata: data?.metadata as Record<string, unknown>,
+      }
+    );
 
-      return { data: updatedCustomer };
-    } catch (error) {
+    if (!updatedCustomer.ok) {
       throw new MedusaError(
-        MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        error instanceof Error ? error.message : "Failed to update customer"
+        MedusaError.Types.UNEXPECTED_STATE,
+        updatedCustomer.error?.message ?? "Failed to update customer"
       );
     }
+
+    return {
+      data: updatedCustomer.value as unknown as Record<string, unknown>,
+    };
   };
 
   deleteAccountHolder = async ({
@@ -392,22 +373,15 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
 
     const accountHolderId = context.account_holder?.data?.id as string;
 
-    try {
-      const result = await this.stellar.customer.delete(accountHolderId);
+    const result = await this.stellar.customer.delete(accountHolderId);
 
-      if (!result.ok) {
-        throw new MedusaError(
-          MedusaError.Types.UNEXPECTED_STATE,
-          result.error?.message ?? "Failed to delete customer"
-        );
-      }
-
-      return { data: result.value as unknown as Record<string, unknown> };
-    } catch (error) {
+    if (!result.ok) {
       throw new MedusaError(
-        MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        error instanceof Error ? error.message : "Failed to delete customer"
+        MedusaError.Types.UNEXPECTED_STATE,
+        result.error?.message ?? "Failed to delete customer"
       );
     }
+
+    return { data: result.value as unknown as Record<string, unknown> };
   };
 }
