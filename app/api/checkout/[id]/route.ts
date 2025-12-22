@@ -9,8 +9,11 @@ import { schemaFor } from "@/types";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-export const GET = async (req: NextRequest, params: { id: string }) => {
-  const { id } = params;
+export const GET = async (
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) => {
+  const { id } = await context.params;
 
   const apiKey = req.headers.get("x-api-key");
 
@@ -32,8 +35,11 @@ const putCheckoutSchema = schemaFor<Partial<Checkout>>()(
   })
 );
 
-export const PUT = async (req: NextRequest, params: { id: string }) => {
-  const { id } = params;
+export const PUT = async (
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) => {
+  const { id } = await context.params;
 
   const apiKey = req.headers.get("x-api-key");
 
@@ -52,8 +58,11 @@ export const PUT = async (req: NextRequest, params: { id: string }) => {
   return NextResponse.json({ data: checkout });
 };
 
-export const DELETE = async (req: NextRequest, params: { id: string }) => {
-  const { id } = params;
+export const DELETE = async (
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) => {
+  const { id } = await context.params;
 
   const apiKey = req.headers.get("x-api-key");
 

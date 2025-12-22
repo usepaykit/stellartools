@@ -48,8 +48,8 @@ interface WebhooksModalProps {
 
 const WEBHOOK_EVENTS = [
   { id: "customer.created", label: "Customer Created" },
-  { id: "invoice.created", label: "Invoice Created" },
-  { id: "payment.succeded", label: "Payment Succeeded" },
+  { id: "checkout.created", label: "Checkout Created" },
+  { id: "payment.confirmed", label: "Payment Confirmed" },
   { id: "payment.failed", label: "Payment Failed" },
 ] as const satisfies { id: WebhookEvent[number]; label: string }[];
 

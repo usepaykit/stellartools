@@ -2,8 +2,11 @@ import { resolveApiKey } from "@/actions/apikey";
 import { refreshTxStatus, retrievePayment } from "@/actions/payment";
 import { NextRequest, NextResponse } from "next/server";
 
-export const GET = async (req: NextRequest, params: { id: string }) => {
-  const { id } = params;
+export const GET = async (
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) => {
+  const { id } = await context.params;
 
   const apiKey = req.headers.get("x-api-key");
 

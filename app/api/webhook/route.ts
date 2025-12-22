@@ -4,7 +4,7 @@ import { processStellarWebhook } from "@/actions/webhook";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-export const dynamic = "force dynamic";
+export const dynamic = "force-dynamic";
 
 const postWebhookSchema = z.object({
   apiKey: z.string(),

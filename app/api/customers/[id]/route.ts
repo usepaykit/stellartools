@@ -9,14 +9,17 @@ import { schemaFor } from "@/types";
 import { NextRequest, NextResponse } from "next/server";
 import z from "zod";
 
-export const GET = async (req: NextRequest, params: { id: string }) => {
+export const GET = async (
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) => {
   const apiKey = req.headers.get("x-api-key");
 
   if (!apiKey) {
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { id } = params;
+  const { id } = await context.params;
 
   const { organizationId } = await resolveApiKey(apiKey);
 
@@ -33,14 +36,17 @@ const putCustomerSchema = schemaFor<Partial<Customer>>()(
   })
 );
 
-export const PUT = async (req: NextRequest, params: { id: string }) => {
+export const PUT = async (
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) => {
   const apiKey = req.headers.get("x-api-key");
 
   if (!apiKey) {
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { id } = params;
+  const { id } = await context.params;
 
   const { organizationId } = await resolveApiKey(apiKey);
 
@@ -53,14 +59,17 @@ export const PUT = async (req: NextRequest, params: { id: string }) => {
   return NextResponse.json({ data: customer });
 };
 
-export const DELETE = async (req: NextRequest, params: { id: string }) => {
+export const DELETE = async (
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) => {
   const apiKey = req.headers.get("x-api-key");
 
   if (!apiKey) {
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { id } = params;
+  const { id } = await context.params;
 
   const { organizationId } = await resolveApiKey(apiKey);
 
