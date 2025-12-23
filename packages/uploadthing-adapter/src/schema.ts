@@ -26,3 +26,26 @@ export const stellarUploadthingOptionsSchema =
       debug: z.boolean().optional(),
     })
   );
+
+export interface StellarMetadata {
+  __stellar: {
+    /**
+     * The customer ID of the Stellar metadata.
+     */
+    customerId: string;
+
+    /**
+     * The required credits of the Stellar metadata.
+     */
+    requiredCredits: number;
+  };
+}
+
+export const stellarMetadataSchema = schemaFor<StellarMetadata>()(
+  z.object({
+    __stellar: z.object({
+      customerId: z.string(),
+      requiredCredits: z.number(),
+    }),
+  })
+);
