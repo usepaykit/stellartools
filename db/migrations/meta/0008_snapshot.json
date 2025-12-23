@@ -1,5 +1,5 @@
 {
-  "id": "1b606b29-77aa-4166-8909-282081322579",
+  "id": "1c52ea78-5426-4176-a70a-01a90e2b8e6f",
   "prevId": "ab532684-1c63-40c0-808d-9b1d424e4032",
   "version": "7",
   "dialect": "postgresql",
@@ -104,8 +104,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "token": {
-          "name": "token",
+        "key_hash": {
+          "name": "key_hash",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -176,11 +176,11 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "api_key_token_unique": {
-          "name": "api_key_token_unique",
+        "api_key_key_hash_unique": {
+          "name": "api_key_key_hash_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "token"
+            "key_hash"
           ]
         }
       },
@@ -493,6 +493,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "is_revoked": {
+          "name": "is_revoked",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         }
       },
       "indexes": {

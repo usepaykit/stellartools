@@ -387,6 +387,7 @@ export const creditBalances = pgTable(
     granted: integer("granted").notNull().default(0),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    isRevoked: boolean("is_revoked").default(false).notNull(),
   },
   (table) => ({
     // One balance per customer per product
