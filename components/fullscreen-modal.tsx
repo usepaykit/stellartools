@@ -138,7 +138,9 @@ export const FullScreenModal = ({
                   scrollArea.className
                 )}
               >
-                <div className={cn("px-6 py-6", size === "full" && "h-[200px]")}>
+                <div
+                  className={cn("px-6 py-6", size === "full" && "h-[200px]")}
+                >
                   {children}
                 </div>
               </ScrollArea>

@@ -2,11 +2,12 @@
 
 import * as React from "react";
 
-import { FullScreenModal } from "@/components/fullscreen-modal";
-import { TextField } from "@/components/input-picker";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, type TableAction } from "@/components/data-table";
+import { FullScreenModal } from "@/components/fullscreen-modal";
+import { TextField } from "@/components/input-picker";
+import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -16,10 +17,9 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { ColumnDef } from "@tanstack/react-table";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ColumnDef } from "@tanstack/react-table";
 import {
   ChevronRight,
   Copy,
@@ -108,9 +108,7 @@ const mockStandardKeys: ApiKey[] = [
 
 export default function ApiKeysPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const [createdApiKey, setCreatedApiKey] = React.useState<string | null>(
-    null
-  );
+  const [createdApiKey, setCreatedApiKey] = React.useState<string | null>(null);
 
   const columns: ColumnDef<ApiKey>[] = [
     {
@@ -290,20 +288,17 @@ export default function ApiKeysPage() {
             <div className="space-y-4">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
-                  <h2 className="text-xl font-semibold">API keys</h2>
+                  <h2 className="text-xl font-semibold">Standard keys</h2>
                   <p className="text-muted-foreground text-sm">
-                    Create a key that unlocks full API access, enabling
-                    extensive interaction with your account.{" "}
+                    Use these keys for server-side requests to the Stellar Tools
+                    API.{" "}
                     <Link href="#" className="text-primary hover:underline">
                       Learn more
                     </Link>
                     .
                   </p>
                 </div>
-                <Button
-                  className="gap-2"
-                  onClick={() => setIsModalOpen(true)}
-                >
+                <Button className="gap-2" onClick={() => setIsModalOpen(true)}>
                   <Plus className="h-4 w-4" />
                   Create secret key
                 </Button>

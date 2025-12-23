@@ -211,7 +211,7 @@ const StatusBadge = ({
     return (
       <Badge
         variant="outline"
-        className="gap-1.5 border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
+        className="w-[90px] justify-center gap-1.5 border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
       >
         <CheckCircle2 className="h-3 w-3" />
         200 OK
@@ -222,12 +222,12 @@ const StatusBadge = ({
   return (
     <Badge
       variant="outline"
-      className="gap-1.5 border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400"
+      className="w-[90px] justify-center gap-1.5 border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400"
     >
       {nextRetry ? (
         <Clock className="h-3 w-3" />
       ) : (
-      <XCircle className="h-3 w-3" />
+        <XCircle className="h-3 w-3" />
       )}
       Failed
     </Badge>
@@ -275,7 +275,7 @@ const columns: ColumnDef<WebhookLog>[] = [
               nextRetry={log.nextRetry}
             />
           </div>
-            <span className="text-sm font-medium">{log.eventType}</span>
+          <span className="text-sm font-medium">{log.eventType}</span>
         </div>
       );
     },
@@ -289,13 +289,13 @@ const columns: ColumnDef<WebhookLog>[] = [
       return (
         <div className="text-right whitespace-nowrap">
           <span className="text-muted-foreground text-sm">
-              {log.timestamp.toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
+            {log.timestamp.toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
               second: "2-digit",
-                hour12: true,
-              })}
-            </span>
+              hour12: true,
+            })}
+          </span>
         </div>
       );
     },
@@ -343,7 +343,7 @@ export default function WebhookLogPage() {
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-4">
                 <span className="text-sm font-medium">Delivery status</span>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex shrink-0 items-center gap-2">
                   {log.status === "failed" ? (
                     <Badge
                       variant="outline"
@@ -380,18 +380,18 @@ export default function WebhookLogPage() {
               />
 
               <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                <LogDetailItem
-                  label="Event ID"
-                  value={
-                    <Link href="#" className="text-primary hover:underline">
-                      {log.eventId}
-                    </Link>
-                  }
-                />
+                <div className="min-w-0 flex-1">
+                  <LogDetailItem
+                    label="Event ID"
+                    value={
+                      <Link href="#" className="text-primary hover:underline">
+                        {log.eventId}
+                      </Link>
+                    }
+                  />
                 </div>
                 <div className="flex items-center pt-4">
-                <CopyButton text={log.eventId} label="Copy event ID" />
+                  <CopyButton text={log.eventId} label="Copy event ID" />
                 </div>
               </div>
 
