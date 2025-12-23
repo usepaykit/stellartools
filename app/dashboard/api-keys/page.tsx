@@ -5,8 +5,7 @@ import * as React from "react";
 import { ApiKeyModal } from "@/components/api-keys/api-key-modal";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { DataTable, TableAction } from "@/components/data-table";
-import { Button } from "@/components/ui/button";
+import { DataTable, type TableAction } from "@/components/data-table";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -15,14 +14,10 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
+import { truncate } from "@/lib/utils";
 import { ColumnDef } from "@tanstack/react-table";
-import {
-  ChevronRight,
-  Copy,
-  ExternalLink,
-  Info,
-  Plus,
-} from "lucide-react";
+import { ChevronRight, ExternalLink, Info, Plus } from "lucide-react";
 import Link from "next/link";
 
 type ApiKeyType = "restricted" | "standard";
@@ -42,7 +37,8 @@ const mockStandardKeys: ApiKey[] = [
   {
     id: "key_1",
     name: "Publishable key",
-    token: "stellar_pk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
+    token:
+      "stellar_pk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
     type: "standard",
     ipRestrictions: undefined,
     lastUsed: new Date("2024-12-23"),
@@ -51,7 +47,8 @@ const mockStandardKeys: ApiKey[] = [
   {
     id: "key_2",
     name: "Secret key",
-    token: "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
+    token:
+      "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
     type: "standard",
     ipRestrictions: undefined,
     lastUsed: new Date("2024-12-22"),
@@ -60,7 +57,8 @@ const mockStandardKeys: ApiKey[] = [
   {
     id: "key_3",
     name: "Main Backend Key [Yash]",
-    token: "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
+    token:
+      "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
     type: "standard",
     ipRestrictions: undefined,
     lastUsed: new Date("2024-12-22"),
@@ -69,7 +67,8 @@ const mockStandardKeys: ApiKey[] = [
   {
     id: "key_4",
     name: "Saqlain_Key_LM",
-    token: "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
+    token:
+      "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
     type: "standard",
     ipRestrictions: undefined,
     lastUsed: new Date("2024-12-23"),
@@ -78,7 +77,8 @@ const mockStandardKeys: ApiKey[] = [
   {
     id: "key_5",
     name: "Saqlain_key_LM_C",
-    token: "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
+    token:
+      "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
     type: "standard",
     ipRestrictions: undefined,
     lastUsed: new Date("2024-12-23"),
@@ -86,41 +86,9 @@ const mockStandardKeys: ApiKey[] = [
   },
 ];
 
-const CopyTokenButton = ({ token }: { token: string }) => {
-  const [copied, setCopied] = React.useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(token);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      className="h-6 w-6"
-      onClick={handleCopy}
-      title="Copy token"
-    >
-      {copied ? (
-        <Copy className="h-3.5 w-3.5 text-green-600" />
-      ) : (
-        <Copy className="h-3.5 w-3.5" />
-      )}
-    </Button>
-  );
-};
-
-const formatToken = (token: string) => {
-  if (token.length > 20) {
-    return `${token.substring(0, 12)}...${token.substring(token.length - 6)}`;
-  }
-  return token;
-};
-
 export default function ApiKeysPage() {
-  const [isRestrictedModalOpen, setIsRestrictedModalOpen] = React.useState(false);
+  const [isRestrictedModalOpen, setIsRestrictedModalOpen] =
+    React.useState(false);
   const [isStandardModalOpen, setIsStandardModalOpen] = React.useState(false);
 
   const restrictedColumns: ColumnDef<ApiKey>[] = [
@@ -139,8 +107,9 @@ export default function ApiKeysPage() {
         const token = row.original.token;
         return (
           <div className="flex items-center gap-2">
-            <span className="font-mono text-sm">{formatToken(token)}</span>
-            <CopyTokenButton token={token} />
+            <span className="font-mono text-sm">
+              {truncate(token, { start: 1, end: 1 })}
+            </span>
           </div>
         );
       },
@@ -158,7 +127,7 @@ export default function ApiKeysPage() {
             ) : (
               <>
                 <span className="text-sm">None</span>
-                <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                <Info className="text-muted-foreground h-3.5 w-3.5" />
               </>
             )}
           </div>
@@ -171,7 +140,8 @@ export default function ApiKeysPage() {
       header: "LAST USED",
       cell: ({ row }) => {
         const date = row.original.lastUsed;
-        if (!date) return <span className="text-sm text-muted-foreground">—</span>;
+        if (!date)
+          return <span className="text-muted-foreground text-sm">—</span>;
         return (
           <span className="text-sm">
             {date.toLocaleDateString("en-US", {
@@ -218,8 +188,9 @@ export default function ApiKeysPage() {
         const token = row.original.token;
         return (
           <div className="flex items-center gap-2">
-            <span className="font-mono text-sm">{formatToken(token)}</span>
-            <CopyTokenButton token={token} />
+            <span className="font-mono text-sm">
+              {truncate(token, { start: 4, end: 2, separator: "...." })}
+            </span>
           </div>
         );
       },
@@ -237,7 +208,7 @@ export default function ApiKeysPage() {
             ) : (
               <>
                 <span className="text-sm">None</span>
-                <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                <Info className="text-muted-foreground h-3.5 w-3.5" />
               </>
             )}
           </div>
@@ -250,7 +221,8 @@ export default function ApiKeysPage() {
       header: "LAST USED",
       cell: ({ row }) => {
         const date = row.original.lastUsed;
-        if (!date) return <span className="text-sm text-muted-foreground">—</span>;
+        if (!date)
+          return <span className="text-muted-foreground text-sm">—</span>;
         return (
           <span className="text-sm">
             {date.toLocaleDateString("en-US", {
@@ -385,12 +357,12 @@ export default function ApiKeysPage() {
 
             {/* Header */}
             <div className="flex items-center justify-between">
-    <div>
+              <div>
                 <h1 className="text-3xl font-bold tracking-tight">API keys</h1>
               </div>
               <Link
                 href="#"
-                className="text-primary hover:underline text-sm flex items-center gap-1"
+                className="text-primary flex items-center gap-1 text-sm hover:underline"
               >
                 Learn more about API authentication
                 <ExternalLink className="h-4 w-4" />
@@ -441,8 +413,8 @@ export default function ApiKeysPage() {
                 <div className="space-y-1">
                   <h2 className="text-xl font-semibold">Standard keys</h2>
                   <p className="text-muted-foreground text-sm">
-                    Create a key that unlocks full API access, enabling extensive
-                    interaction with your account.{" "}
+                    Create a key that unlocks full API access, enabling
+                    extensive interaction with your account.{" "}
                     <Link href="#" className="text-primary hover:underline">
                       Learn more
                     </Link>
