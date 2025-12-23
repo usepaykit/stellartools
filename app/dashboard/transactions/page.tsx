@@ -24,6 +24,7 @@ import {
   Wallet,
   XCircle,
 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 
@@ -458,6 +459,9 @@ type TabType = "all" | TransactionStatus;
 export default function TransactionsPage() {
   const [activeTab, setActiveTab] = React.useState<TabType>("all");
   const [isRefundModalOpen, setIsRefundModalOpen] = React.useState(false);
+  const searchParams = useSearchParams();
+  const customerId = searchParams.get("customer");
+  const paymentId = searchParams.get("paymentId");
 
   // Calculate statistics
   const stats = React.useMemo(() => {
@@ -475,11 +479,19 @@ export default function TransactionsPage() {
 
   // Filter transactions based on active tab
   const filteredTransactions = React.useMemo(() => {
+    if (customerId) {
+      return mockTransactions.filter((t) => t.customer.email === customerId);
+    }
+
+    if (paymentId) {
+      return mockTransactions.filter((t) => t.description === paymentId);
+    }
+
     if (activeTab === "all") {
       return mockTransactions;
     }
     return mockTransactions.filter((t) => t.status === activeTab);
-  }, [activeTab]);
+  }, [activeTab, customerId, paymentId]);
 
   const tableActions: TableAction<Transaction>[] = [
     {
