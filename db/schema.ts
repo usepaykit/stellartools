@@ -406,6 +406,12 @@ export const creditBalances = pgTable(
   })
 );
 
+export const creditTransactionTypeEnum = pgEnum("credit_transaction_type", [
+  "deduct",
+  "refund",
+  "grant",
+]);
+
 export const creditTransactions = pgTable(
   "credit_transaction",
   {
@@ -422,6 +428,7 @@ export const creditTransactions = pgTable(
     balanceBefore: integer("balance_before").notNull(),
     balanceAfter: integer("balance_after").notNull(),
     reason: text("reason"),
+    type: creditTransactionTypeEnum("type").notNull(),
     metadata: jsonb("metadata"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),

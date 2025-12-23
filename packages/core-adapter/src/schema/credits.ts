@@ -171,3 +171,34 @@ export const creditTransactionHistorySchema =
       offset: z.number().optional(),
     })
   );
+
+export interface ConsumeCreditParams {
+  /**
+   * The product ID of the consume credit.
+   */
+  productId: string;
+
+  /**
+   * The raw amount of the consume credit.
+   */
+  rawAmount: number;
+
+  /**
+   * The reason of the consume credit.
+   */
+  reason?: string;
+
+  /**
+   * The metadata of the consume credit.
+   */
+  metadata?: Record<string, unknown>;
+}
+
+export const consumeCreditSchema = schemaFor<ConsumeCreditParams>()(
+  z.object({
+    productId: z.string(),
+    rawAmount: z.number(),
+    reason: z.string().optional(),
+    metadata: z.record(z.string(), z.any()).optional(),
+  })
+);

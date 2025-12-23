@@ -7,7 +7,6 @@ import {
   StellarUploadthingOptions,
   stellarUploadthingOptionsSchema,
 } from "./schema";
-import { calculateCredits } from "./utils";
 
 export class StellarUploadThingAdapter {
   private stellar: StellarTools;
@@ -44,7 +43,6 @@ export class StellarUploadThingAdapter {
           files: Array<{ name: string; size: number; type: string }>;
           input: unknown;
         }) => {
-          // 1. Validation Logic (No refund needed if these fail)
           const product = await this.stellar.product.retrieve(
             this.options.productId
           );
@@ -55,10 +53,10 @@ export class StellarUploadThingAdapter {
             });
 
           const customerId =
-            opts.req?.headers?.get?.("x-customer-id") ?? // NODE ENV
+            opts.req?.headers?.get?.("x-customer-id") ??
             (opts.req?.headers as unknown as Record<string, string>)?.[
               "x-customer-id"
-            ]; // H3 ENV
+            ];
 
           if (!customerId) {
             throw new UploadThingError({
@@ -67,26 +65,23 @@ export class StellarUploadThingAdapter {
             });
           }
 
-          const requiredCredits = calculateCredits(opts.files, {
-            unitDivisor: product.value.unitDivisor as number,
-            unitsPerCredit: product.value.unitsPerCredit as number,
-          });
-
-          // 2. Deduction
-          const deductResult = await this.stellar.credit.deduct(customerId, {
+          const result = await this.stellar.credit.consume(customerId, {
             productId: this.options.productId,
-            amount: requiredCredits,
+            rawAmount: opts.files.reduce(
+              (sum: number, f: any) => sum + f.size,
+              0
+            ),
             reason: "Upload started",
+            metadata: { fileCount: opts.files.length },
           });
 
-          if (!deductResult.ok) {
+          if (!result.ok) {
             throw new UploadThingError({
               code: "FORBIDDEN",
-              message: "Insufficient credits or deduction failed",
+              message: result.error?.message ?? "Insufficient credits",
             });
           }
 
-          // 3. User Middleware Execution
           try {
             const userMetadata = userMiddleware
               ? await userMiddleware(opts)
@@ -96,7 +91,7 @@ export class StellarUploadThingAdapter {
               ...userMetadata,
               __stellar: {
                 customerId,
-                requiredCredits,
+                requiredCredits: result.value.creditsToDeduct,
               } satisfies StellarMetadata["__stellar"],
             };
           } catch (err) {
@@ -104,7 +99,12 @@ export class StellarUploadThingAdapter {
             throw new UploadThingError({
               code: "INTERNAL_SERVER_ERROR",
               message: err instanceof Error ? err.message : "Middleware failed",
-              data: { __stellar: { customerId, requiredCredits } },
+              data: {
+                __stellar: {
+                  customerId,
+                  requiredCredits: result.value.creditsToDeduct,
+                },
+              },
             });
           }
         };

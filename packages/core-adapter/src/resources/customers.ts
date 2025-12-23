@@ -6,7 +6,7 @@ import {
   createCustomerSchema,
   updateCustomerSchema,
 } from "../schema/customer";
-import { tryCatchAsync } from "../utils";
+import { ERR, OK, tryCatchAsync } from "../utils";
 
 export class CustomerApi {
   private apiClient: ApiClient;
@@ -19,7 +19,7 @@ export class CustomerApi {
     const { error, data } = createCustomerSchema.safeParse(params);
 
     if (error) {
-      throw new Error(`Invalid parameters: ${error.message}`);
+      return ERR(new Error(`Invalid parameters: ${error.message}`));
     }
 
     const [response, customerError] = await tryCatchAsync(
@@ -29,10 +29,12 @@ export class CustomerApi {
     );
 
     if (customerError) {
-      throw new Error(`Failed to create customer: ${customerError.message}`);
+      return ERR(
+        new Error(`Failed to create customer: ${customerError.message}`)
+      );
     }
 
-    return response;
+    return OK(response.value);
   }
 
   async retrieve(id: string) {
@@ -41,17 +43,17 @@ export class CustomerApi {
     );
 
     if (error) {
-      throw new Error(`Failed to retrieve customer: ${error.message}`);
+      return ERR(new Error(`Failed to retrieve customer: ${error.message}`));
     }
 
-    return response;
+    return OK(response.value);
   }
 
   async update(id: string, params: UpdateCustomer) {
     const { error, data } = updateCustomerSchema.safeParse(params);
 
     if (error) {
-      throw new Error(`Invalid parameters: ${error.message}`);
+      return ERR(new Error(`Invalid parameters: ${error.message}`));
     }
 
     const [response, customerError] = await tryCatchAsync(
@@ -61,10 +63,12 @@ export class CustomerApi {
     );
 
     if (customerError) {
-      throw new Error(`Failed to update customer: ${customerError.message}`);
+      return ERR(
+        new Error(`Failed to update customer: ${customerError.message}`)
+      );
     }
 
-    return response;
+    return OK(response.value);
   }
 
   async delete(id: string) {
@@ -73,9 +77,9 @@ export class CustomerApi {
     );
 
     if (error) {
-      throw new Error(`Failed to delete customer: ${error.message}`);
+      return ERR(new Error(`Failed to delete customer: ${error.message}`));
     }
 
-    return response;
+    return OK(response.value);
   }
 }

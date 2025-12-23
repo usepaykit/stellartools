@@ -1,6 +1,6 @@
 import { ApiClient } from "../api-client";
 import { Product } from "../schema/product";
-import { tryCatchAsync } from "../utils";
+import { ERR, OK, tryCatchAsync } from "../utils";
 
 export class ProductApi {
   constructor(private readonly apiClient: ApiClient) {}
@@ -11,9 +11,9 @@ export class ProductApi {
     );
 
     if (error) {
-      throw new Error(`Failed to retrieve product: ${error.message}`);
+      return ERR(new Error(`Failed to retrieve product: ${error.message}`));
     }
 
-    return response;
+    return OK(response.value);
   }
 }

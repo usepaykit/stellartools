@@ -1,114 +1,41 @@
 import { ApiClient } from "../api-client";
 import {
+  ConsumeCreditParams,
   CreditBalance,
   CreditTransaction,
   CreditTransactionHistoryParams,
   CreditTransactionParams,
+  consumeCreditSchema,
   creditTransactionHistorySchema,
   creditTransactionSchema,
 } from "../schema/credits";
-import { tryCatchAsync } from "../utils";
+import { Product } from "../schema/product";
+import { ERR, OK, tryCatchAsync } from "../utils";
 
 export class CreditApi {
   constructor(private apiClient: ApiClient) {}
 
-  async check(customerId: string, productId: string) {
-    const [response, error] = await tryCatchAsync(
-      this.apiClient.get<CreditBalance>(
-        `/api/customers/${customerId}/credits/${productId}`
-      )
-    );
-
-    if (error) {
-      throw new Error(`Failed to check credits: ${error.message}`);
-    }
-
-    return response;
-  }
-
-  /**
-   * Deduct credits from customer's balance
-   */
-  async deduct(customerId: string, params: CreditTransactionParams) {
-    const { error, data } = creditTransactionSchema.safeParse(params);
-
-    if (error) {
-      throw new Error(`Invalid parameters: ${error.message}`);
-    }
-
-    const { productId, amount, reason, metadata } = data;
-
-    const [response, deductError] = await tryCatchAsync(
-      this.apiClient.post<CreditBalance>(
-        `/api/customers/${customerId}/credits/${productId}/deduct`,
-        {
-          body: JSON.stringify({ amount, reason, metadata }),
-        }
-      )
-    );
-
-    if (deductError) {
-      throw new Error(`Failed to deduct credits: ${deductError.message}`);
-    }
-
-    return response;
-  }
-
-  /**
-   * Refund credits back to customer's balance
-   */
   async refund(customerId: string, params: CreditTransactionParams) {
     const { error, data } = creditTransactionSchema.safeParse(params);
 
-    if (error) {
-      throw new Error(`Invalid parameters: ${error.message}`);
-    }
+    if (error) return ERR(new Error(`Invalid parameters: ${error.message}`));
 
     const { productId, amount, reason, metadata } = data;
 
     const [response, refundError] = await tryCatchAsync(
       this.apiClient.post<CreditBalance>(
-        `/api/customers/${customerId}/credits/${productId}/refund`,
-        { body: JSON.stringify({ amount, reason, metadata }) }
+        `/api/customers/${customerId}/credit/${productId}/transaction`,
+        { body: JSON.stringify({ amount, reason, metadata, type: "refund" }) }
       )
     );
 
     if (refundError) {
-      throw new Error(`Failed to refund credits: ${refundError.message}`);
+      return ERR(new Error(`Failed to refund credits: ${refundError.message}`));
     }
 
-    return response;
+    return OK(response.value);
   }
 
-  /**
-   * Grant credits to customer (admin operation)
-   */
-  async grant(customerId: string, params: CreditTransactionParams) {
-    const { error, data } = creditTransactionSchema.safeParse(params);
-
-    if (error) {
-      throw new Error(`Invalid parameters: ${error.message}`);
-    }
-
-    const { productId, amount, reason, metadata } = data;
-
-    const [response, grantError] = await tryCatchAsync(
-      this.apiClient.post<CreditBalance>(
-        `/api/customers/${customerId}/credits/${productId}/grant`,
-        { body: JSON.stringify({ amount, reason, metadata }) }
-      )
-    );
-
-    if (grantError) {
-      throw new Error(`Failed to grant credits: ${grantError.message}`);
-    }
-
-    return response;
-  }
-
-  /**
-   * Get transaction history for a customer
-   */
   async getTransactions(
     customerId: string,
     options?: CreditTransactionHistoryParams
@@ -116,7 +43,7 @@ export class CreditApi {
     const { error, data } = creditTransactionHistorySchema.safeParse(options);
 
     if (error) {
-      throw new Error(`Invalid parameters: ${error.message}`);
+      return ERR(new Error(`Invalid parameters: ${error.message}`));
     }
 
     const { productId, limit, offset } = data;
@@ -128,53 +55,93 @@ export class CreditApi {
 
     const [response, transactionHistoryError] = await tryCatchAsync(
       this.apiClient.get<{
-        transactions: CreditTransaction[];
-        total: number;
-      }>(`/api/customers/${customerId}/credits/transactions?${params}`)
+        data: Array<CreditTransaction>;
+      }>(`/api/customers/${customerId}/credit/transactions?${params}`)
     );
 
     if (transactionHistoryError) {
-      throw new Error(
-        `Failed to get transactions: ${transactionHistoryError.message}`
+      return ERR(
+        new Error(
+          `Failed to get transaction history: ${transactionHistoryError.message}`
+        )
       );
     }
 
-    return response;
+    return OK(response.value!.data);
   }
 
-  /**
-   * Get a single transaction by ID
-   */
-  async getTransaction(transactionId: string) {
+  async getTransaction(transactionId: string, customerId: string) {
     const [response, transactionError] = await tryCatchAsync(
       this.apiClient.get<CreditTransaction>(
-        `/api/credits/transactions/${transactionId}`
+        `/api/customers/${customerId}/credit/transactions/${transactionId}`
       )
     );
 
     if (transactionError) {
-      throw new Error(`Failed to get transaction: ${transactionError.message}`);
+      return ERR(
+        new Error(`Failed to get transaction: ${transactionError.message}`)
+      );
     }
 
-    return response;
+    return OK(response.value);
   }
 
-  async calculateBalance(
-    customerId: string,
-    productId: string,
-    amount: number
-  ) {
-    const [response, balanceError] = await tryCatchAsync(
+  async consume(customerId: string, params: ConsumeCreditParams) {
+    const { error, data } = consumeCreditSchema.safeParse(params);
+
+    if (error) return ERR(new Error(`Invalid parameters: ${error.message}`));
+
+    const { productId, rawAmount, reason, metadata } = data;
+
+    const [product, creditBalance] = await Promise.all([
+      this.apiClient.get<Product>(`/api/products/${productId}`),
+      this.apiClient.get<CreditBalance>(
+        `/api/customers/${customerId}/credits/${productId}`
+      ),
+    ]);
+
+    if (product.error || creditBalance.error) {
+      return ERR(
+        new Error("Failed to retrieve product config or credit balance")
+      );
+    }
+
+    /**
+     * Calculate actual credits
+     * If divisor is 1024 and rawAmount is bytes, result is KB
+     * If divisor is null, we treat rawAmount as the unit itself
+     */
+    const units = product.value.unitDivisor
+      ? rawAmount / product.value.unitDivisor
+      : rawAmount;
+
+    // result = units / unitsPerCredit (e.g., 1000 tokens / 10 tokens per credit = 100 credits)
+    const creditsToDeduct = Math.ceil(
+      units / (product.value.unitsPerCredit || 1)
+    );
+
+    if (creditsToDeduct > creditBalance.value.balance) {
+      return ERR(new Error("Insufficient credits"));
+    }
+
+    const [response, deductError] = await tryCatchAsync(
       this.apiClient.post<CreditBalance>(
-        `/api/customers/${customerId}/credits/${productId}/calculate-balance`,
-        { body: JSON.stringify({ amount }) }
+        `/api/customers/${customerId}/credit/${params.productId}/transaction`,
+        {
+          body: JSON.stringify({
+            amount: creditsToDeduct,
+            reason,
+            metadata,
+            type: "deduct",
+          }),
+        }
       )
     );
 
-    if (balanceError) {
-      throw new Error(`Failed to calculate balance: ${balanceError.message}`);
+    if (deductError) {
+      return ERR(new Error(`Failed to deduct credits: ${deductError.message}`));
     }
 
-    return response;
+    return OK({ ...response.value, creditsToDeduct });
   }
 }

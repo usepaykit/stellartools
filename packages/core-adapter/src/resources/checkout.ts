@@ -6,7 +6,7 @@ import {
   createCheckoutSchema,
   updateCheckoutSchema,
 } from "../schema/checkout";
-import { tryCatchAsync } from "../utils";
+import { ERR, OK, tryCatchAsync } from "../utils";
 
 export class CheckoutApi {
   constructor(private apiClient: ApiClient) {}
@@ -15,7 +15,7 @@ export class CheckoutApi {
     const { error, data } = createCheckoutSchema.safeParse(params);
 
     if (error) {
-      throw new Error(`Invalid parameters: ${error.message}`);
+      return ERR(new Error(`Invalid parameters: ${error.message}`));
     }
 
     const [response, checkoutError] = await tryCatchAsync(
@@ -25,10 +25,12 @@ export class CheckoutApi {
     );
 
     if (checkoutError) {
-      throw new Error(`Failed to create checkout: ${checkoutError.message}`);
+      return ERR(
+        new Error(`Failed to create checkout: ${checkoutError.message}`)
+      );
     }
 
-    return response;
+    return OK(response.value);
   }
 
   async retrieve(id: string) {
@@ -37,17 +39,17 @@ export class CheckoutApi {
     );
 
     if (error) {
-      throw new Error(`Invalid parameters: ${error.message}`);
+      return ERR(new Error(`Invalid parameters: ${error.message}`));
     }
 
-    return response;
+    return OK(response.value);
   }
 
   async update(id: string, params: UpdateCheckout) {
     const { error, data } = updateCheckoutSchema.safeParse(params);
 
     if (error) {
-      throw new Error(`Invalid parameters: ${error.message}`);
+      return ERR(new Error(`Invalid parameters: ${error.message}`));
     }
 
     const [response, checkoutError] = await tryCatchAsync(
@@ -57,10 +59,12 @@ export class CheckoutApi {
     );
 
     if (checkoutError) {
-      throw new Error(`Failed to update checkout: ${checkoutError.message}`);
+      return ERR(
+        new Error(`Failed to update checkout: ${checkoutError.message}`)
+      );
     }
 
-    return response;
+    return OK(response.value);
   }
 
   async delete(id: string) {
@@ -69,9 +73,9 @@ export class CheckoutApi {
     );
 
     if (error) {
-      throw new Error(`Failed to delete checkout: ${error.message}`);
+      return ERR(new Error(`Failed to delete checkout: ${error.message}`));
     }
 
-    return response;
+    return OK(response.value);
   }
 }

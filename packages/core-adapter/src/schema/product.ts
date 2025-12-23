@@ -91,16 +91,6 @@ export interface Product {
    * The units per credit of the product.
    */
   unitsPerCredit?: number;
-
-  /**
-   * The credits granted to the product.
-   */
-  creditsGranted?: number | null;
-
-  /**
-   * The credit expiry days of the product.
-   */
-  creditExpiryDays?: number | null;
 }
 
 export const productSchema = schemaFor<Product>()(
@@ -121,7 +111,5 @@ export const productSchema = schemaFor<Product>()(
     unit: z.string().optional(),
     unitDivisor: z.number().optional(),
     unitsPerCredit: z.number().optional(),
-    creditsGranted: z.number().optional(),
-    creditExpiryDays: z.number().optional(),
   })
 );
