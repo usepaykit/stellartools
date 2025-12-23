@@ -85,8 +85,7 @@ const productSchema = z.object({
 
   unit: z.string().optional(),
   unitsPerCredit: z.number().min(1).default(1).optional(),
-  creditsGranted: z.number().min(1).optional(),
-  creditExpiryDays: z.number().min(1).optional(),
+  unitDivisor: z.number().min(1).optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -418,6 +417,7 @@ function ProductsModal({
       recurringPeriod: "month",
       price: { amount: "", asset: "XLM" },
       phoneNumberEnabled: false,
+      unitDivisor: 1,
     },
   });
 
@@ -616,34 +616,14 @@ function ProductsModal({
 
                 <RHF.Controller
                   control={form.control}
-                  name="creditsGranted"
+                  name="unitDivisor"
                   render={({ field, fieldState: { error } }) => (
                     <NumberPicker
                       {...field}
-                      value={field.value || 0}
-                      id="creditsGranted"
-                      label="Credits Granted"
-                      placeholder="e.g., 10000"
-                      helpText={
-                        watched.unit && watched.unitsPerCredit
-                          ? `= ${(watched.creditsGranted || 0) * watched.unitsPerCredit} ${watched.unit}`
-                          : "Total credits included in this product"
-                      }
-                      error={error?.message}
-                    />
-                  )}
-                />
-
-                <RHF.Controller
-                  control={form.control}
-                  name="creditExpiryDays"
-                  render={({ field, fieldState: { error } }) => (
-                    <NumberPicker
-                      {...field}
-                      value={field.value || 0}
-                      id="creditExpiryDays"
-                      label="Expiry (days)"
-                      helpText="Credits expire after X days"
+                      value={field.value || 1}
+                      id="unitDivisor"
+                      label="Unit Divisor"
+                      helpText="Custom divisor to convert raw usage to units"
                       error={error?.message}
                     />
                   )}

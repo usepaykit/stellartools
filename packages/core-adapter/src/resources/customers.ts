@@ -6,7 +6,7 @@ import {
   createCustomerSchema,
   updateCustomerSchema,
 } from "../schema/customer";
-import { tryCatchAsync } from "../utils";
+import { ERR, OK, tryCatchAsync } from "../utils";
 
 export class CustomerApi {
   private apiClient: ApiClient;
@@ -15,11 +15,11 @@ export class CustomerApi {
     this.apiClient = apiClient;
   }
 
-  create = async (params: CreateCustomer) => {
+  async create(params: CreateCustomer) {
     const { error, data } = createCustomerSchema.safeParse(params);
 
     if (error) {
-      throw new Error(`Invalid parameters: ${error.message}`);
+      return ERR(new Error(`Invalid parameters: ${error.message}`));
     }
 
     const [response, customerError] = await tryCatchAsync(
@@ -29,29 +29,31 @@ export class CustomerApi {
     );
 
     if (customerError) {
-      throw new Error(`Failed to create customer: ${customerError.message}`);
+      return ERR(
+        new Error(`Failed to create customer: ${customerError.message}`)
+      );
     }
 
-    return response;
-  };
+    return OK(response.value);
+  }
 
-  retrieve = async (id: string) => {
+  async retrieve(id: string) {
     const [response, error] = await tryCatchAsync(
       this.apiClient.get<Customer>(`/customers/${id}`)
     );
 
     if (error) {
-      throw new Error(`Failed to retrieve customer: ${error.message}`);
+      return ERR(new Error(`Failed to retrieve customer: ${error.message}`));
     }
 
-    return response;
-  };
+    return OK(response.value);
+  }
 
-  update = async (id: string, params: UpdateCustomer) => {
+  async update(id: string, params: UpdateCustomer) {
     const { error, data } = updateCustomerSchema.safeParse(params);
 
     if (error) {
-      throw new Error(`Invalid parameters: ${error.message}`);
+      return ERR(new Error(`Invalid parameters: ${error.message}`));
     }
 
     const [response, customerError] = await tryCatchAsync(
@@ -61,21 +63,23 @@ export class CustomerApi {
     );
 
     if (customerError) {
-      throw new Error(`Failed to update customer: ${customerError.message}`);
+      return ERR(
+        new Error(`Failed to update customer: ${customerError.message}`)
+      );
     }
 
-    return response;
-  };
+    return OK(response.value);
+  }
 
-  delete = async (id: string) => {
+  async delete(id: string) {
     const [response, error] = await tryCatchAsync(
       this.apiClient.delete<Customer>(`/customers/${id}`)
     );
 
     if (error) {
-      throw new Error(`Failed to delete customer: ${error.message}`);
+      return ERR(new Error(`Failed to delete customer: ${error.message}`));
     }
 
-    return response;
-  };
+    return OK(response.value);
+  }
 }

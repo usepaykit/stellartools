@@ -6,16 +6,16 @@ import {
   createCheckoutSchema,
   updateCheckoutSchema,
 } from "../schema/checkout";
-import { tryCatchAsync } from "../utils";
+import { ERR, OK, tryCatchAsync } from "../utils";
 
 export class CheckoutApi {
   constructor(private apiClient: ApiClient) {}
 
-  create = async (params: CreateCheckout) => {
+  async create(params: CreateCheckout) {
     const { error, data } = createCheckoutSchema.safeParse(params);
 
     if (error) {
-      throw new Error(`Invalid parameters: ${error.message}`);
+      return ERR(new Error(`Invalid parameters: ${error.message}`));
     }
 
     const [response, checkoutError] = await tryCatchAsync(
@@ -25,29 +25,31 @@ export class CheckoutApi {
     );
 
     if (checkoutError) {
-      throw new Error(`Failed to create checkout: ${checkoutError.message}`);
+      return ERR(
+        new Error(`Failed to create checkout: ${checkoutError.message}`)
+      );
     }
 
-    return response;
-  };
+    return OK(response.value);
+  }
 
-  retrieve = async (id: string) => {
+  async retrieve(id: string) {
     const [response, error] = await tryCatchAsync(
       this.apiClient.get<Checkout>(`/checkouts/${id}`)
     );
 
     if (error) {
-      throw new Error(`Invalid parameters: ${error.message}`);
+      return ERR(new Error(`Invalid parameters: ${error.message}`));
     }
 
-    return response;
-  };
+    return OK(response.value);
+  }
 
-  update = async (id: string, params: UpdateCheckout) => {
+  async update(id: string, params: UpdateCheckout) {
     const { error, data } = updateCheckoutSchema.safeParse(params);
 
     if (error) {
-      throw new Error(`Invalid parameters: ${error.message}`);
+      return ERR(new Error(`Invalid parameters: ${error.message}`));
     }
 
     const [response, checkoutError] = await tryCatchAsync(
@@ -57,21 +59,23 @@ export class CheckoutApi {
     );
 
     if (checkoutError) {
-      throw new Error(`Failed to update checkout: ${checkoutError.message}`);
+      return ERR(
+        new Error(`Failed to update checkout: ${checkoutError.message}`)
+      );
     }
 
-    return response;
-  };
+    return OK(response.value);
+  }
 
-  delete = async (id: string) => {
+  async delete(id: string) {
     const [response, error] = await tryCatchAsync(
       this.apiClient.delete<Checkout>(`/checkouts/${id}`)
     );
 
     if (error) {
-      throw new Error(`Failed to delete checkout: ${error.message}`);
+      return ERR(new Error(`Failed to delete checkout: ${error.message}`));
     }
 
-    return response;
-  };
+    return OK(response.value);
+  }
 }
