@@ -6,10 +6,11 @@
  * 2. Set your API keys in environment variables
  * 3. Run: npx tsx test-usage.ts
  */
+import { openai } from "@ai-sdk/openai";
+// Example: install with `npm install @ai-sdk/openai`
+import { z } from "zod";
 
 import { createStellarAI } from "./src/index";
-import { openai } from "@ai-sdk/openai"; // Example: install with `npm install @ai-sdk/openai`
-import { z } from "zod";
 
 async function testGenerateText() {
   console.log("\n=== Testing generateText ===");
@@ -79,7 +80,8 @@ async function testGenerateObject() {
 
   const result = await stellar.generateObject({
     schema,
-    prompt: "Generate a person named John who is 25 years old and likes coding and reading",
+    prompt:
+      "Generate a person named John who is 25 years old and likes coding and reading",
     model: openai("gpt-4o-mini"),
   });
 
@@ -109,7 +111,6 @@ async function testStreamObject() {
   console.log(result);
 }
 
-
 // Run all tests
 async function runAllTests() {
   try {
@@ -138,4 +139,3 @@ export {
   testGenerateObject,
   testStreamObject,
 };
-

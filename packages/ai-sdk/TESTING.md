@@ -10,11 +10,13 @@ This directory contains test files to help you verify the SDK is working correct
 ## Prerequisites
 
 1. Install dependencies:
+
    ```bash
    pnpm install
    ```
 
 2. Install a model provider (e.g., OpenAI):
+
    ```bash
    pnpm add @ai-sdk/openai
    ```
@@ -29,16 +31,19 @@ This directory contains test files to help you verify the SDK is working correct
 ## Running Tests
 
 ### Simple Example
+
 ```bash
 pnpm run example
 ```
 
 ### Full Test Suite
+
 ```bash
 pnpm run test:usage
 ```
 
 Or directly with tsx:
+
 ```bash
 npx tsx example.ts
 npx tsx test-usage.ts
@@ -65,4 +70,3 @@ The test suite covers:
 - The `checkBilling` function currently returns a random boolean for testing
 - In production, this would call the actual Stellar Tools billing API
 - The checkout URL is currently hardcoded to `https://checkout.stellartools.com`
-

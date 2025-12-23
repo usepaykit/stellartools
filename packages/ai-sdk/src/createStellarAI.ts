@@ -1,7 +1,16 @@
-import { EmbeddingModel, LanguageModel, generateText, streamText, generateObject, streamObject, StreamObjectResult } from "ai";
+import {
+  EmbeddingModel,
+  LanguageModel,
+  StreamObjectResult,
+  generateObject,
+  generateText,
+  streamObject,
+  streamText,
+} from "ai";
+import { embed } from "ai";
+
 import { checkBilling } from "./billings";
 import { CheckoutResult } from "./types";
-import { embed } from "ai";
 
 export class StellarAI {
   private apiKey: string;
@@ -75,7 +84,6 @@ export class StellarAI {
     });
   }
 
-
   async generateObject(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     options: any
@@ -90,7 +98,9 @@ export class StellarAI {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async streamObject(options: any): Promise<StreamObjectResult<unknown, unknown, never> | CheckoutResult> {
+  async streamObject(
+    options: any
+  ): Promise<StreamObjectResult<unknown, unknown, never> | CheckoutResult> {
     const checkout = await this.checkBillingAndGetCheckout();
     if (checkout) return checkout;
 

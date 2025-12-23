@@ -3,9 +3,8 @@
  *
  * This demonstrates the basic usage pattern from sdk.txt
  */
-
-
 import { openai } from "@ai-sdk/openai";
+
 import { createStellarAI } from "./src";
 
 // Initialize the SDK
@@ -26,4 +25,3 @@ async function main() {
 }
 
 main().catch(console.error);
-
