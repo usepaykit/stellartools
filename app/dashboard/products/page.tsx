@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { postProduct, retrieveProducts } from "@/actions/product";
+import { postProduct, retrieveProductsWithAssets } from "@/actions/product";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
@@ -74,9 +74,9 @@ const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   images: z.array(z.any()).transform((val) => val as FileWithPreview[]),
-  billingCycle: z.enum(["one_time", "recurring", "metered"] as const),
+  billingCycle: z.enum(["one_time", "recurring", "metered"]),
   recurringInterval: z.number().min(1).optional(),
-  recurringPeriod: z.enum(["day", "week", "month", "year"] as const).optional(),
+  recurringPeriod: z.enum(["day", "week", "month", "year"]).optional(),
   price: z.object({
     amount: z
       .string()
@@ -221,18 +221,18 @@ function ProductsPageContent() {
 
   // Fetch products using React Query with data transformation
   const {
-    data: transformedProducts = [],
+    data: transformedProducts,
     isLoading,
   } = useQuery({
     queryKey: ["products", ORGANIZATION_ID, ENVIRONMENT],
-    queryFn: () => retrieveProducts(ORGANIZATION_ID, ENVIRONMENT),
+    queryFn: () => retrieveProductsWithAssets(ORGANIZATION_ID, ENVIRONMENT),
     select: (productsData) => {
       return productsData.map((dbProduct: any) => {
-        const metadata = (dbProduct.metadata as Record<string, any>) || {};
-        const priceAmount = metadata.priceAmount || "0";
-        const assetCode = dbProduct.asset?.code || "XLM";
+        const metadata = dbProduct.metadata!;
+        const priceAmount = metadata.priceAmount!;
+        const assetCode = dbProduct.asset!.code!;
         const isRecurring = dbProduct.billingType === "recurring";
-        const period = metadata.recurringPeriod || undefined;
+        const period = metadata.recurringPeriod;
 
         return {
           id: dbProduct.id,
@@ -243,7 +243,7 @@ function ProductsPageContent() {
             isRecurring,
             period,
           },
-          status: dbProduct.status as "active" | "archived",
+          status: dbProduct.status,
           createdAt: dbProduct.createdAt,
           updatedAt: dbProduct.updatedAt,
         };
@@ -253,9 +253,9 @@ function ProductsPageContent() {
 
   const stats = React.useMemo(
     () => ({
-      all: transformedProducts.length,
-      active: transformedProducts.filter((p) => p.status === "active").length,
-      archived: transformedProducts.filter((p) => p.status === "archived")
+      all: transformedProducts!.length,
+      active: transformedProducts!.filter((p) => p.status === "active").length,
+      archived: transformedProducts!.filter((p) => p.status === "archived")
         .length,
     }),
     [transformedProducts]
@@ -362,7 +362,7 @@ function ProductsPageContent() {
             <div className="border-border/50 overflow-hidden rounded-lg border">
               <DataTable
                 columns={columns}
-                data={transformedProducts}
+                data={transformedProducts!}
                 actions={tableActions}
                 enableBulkSelect
                 isLoading={isLoading}
@@ -461,16 +461,6 @@ function ProductsModal({
   const createProductMutation = useMutation({
     mutationFn: async (data: ProductFormData) => {
 
-
-      // Transform billingCycle to billingType
-      const billingTypeMap: Record<string, "one_time" | "recurring" | "metered"> =
-      {
-        one_time: "one_time",
-        recurring: "recurring",
-        metered: "metered",
-      };
-
-      // Build metadata
       const metadata: Record<string, any> = {
         priceAmount: data.price.amount,
       };
@@ -479,13 +469,12 @@ function ProductsModal({
         metadata.recurringPeriod = data.recurringPeriod;
       }
 
-      // Build product data
       const productData = {
         name: data.name,
         description: data.description || undefined,
-        images: data.images?.map((img) => img.name) || [], // For now, just store file names
-        billingType: billingTypeMap[data.billingCycle] || "one_time",
-        assetId: data.price?.asset || "XLM",
+        images: data.images!.map((img) => img.name), // For now, just store file names
+        billingType: data.billingCycle,
+        assetId: data.price!.asset!,
         phoneNumberRequired: data.phoneNumberEnabled,
         status: "active" as const,
         organizationId: ORGANIZATION_ID,
@@ -494,8 +483,8 @@ function ProductsModal({
         // Metered billing fields (only set if metered)
         unit: data.billingCycle === "metered" ? (data.unit || undefined) : undefined,
         unitDivisor: data.billingCycle === "metered" ? (data.unitDivisor || undefined) : undefined,
-        unitsPerCredit: data.billingCycle === "metered" ? (data.unitsPerCredit || 1) : undefined,
-        creditsGranted: data.billingCycle === "metered" ? (data.creditsGranted || 0) : undefined,
+        unitsPerCredit: data.billingCycle === "metered" ? data.unitsPerCredit! : undefined,
+        creditsGranted: data.billingCycle === "metered" ? data.creditsGranted! : undefined,
       };
 
       return await postProduct(productData);

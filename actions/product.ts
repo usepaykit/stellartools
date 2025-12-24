@@ -17,6 +17,23 @@ export const retrieveProducts = async (
     organizationId: string,
     environment: Network
 ) => {
+    const productsList = await db
+        .select()
+        .from(products)
+        .where(
+            and(
+                eq(products.organizationId, organizationId),
+                eq(products.environment, environment)
+            )
+        );
+
+    return productsList;
+};
+
+export const retrieveProductsWithAssets = async (
+    organizationId: string,
+    environment: Network
+) => {
     const retrievedProductsWithAssets = await db
         .select({
             product: products,
