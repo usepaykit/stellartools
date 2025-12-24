@@ -52,8 +52,17 @@ export async function POST(request: NextRequest) {
     case 'customer.created':
       await handleCustomerCreated(event.data);
       break;
+    case 'customer.updated':
+      await handleCustomerUpdated(event.data);
+      break;
+    case 'customer.deleted':
+      await handleCustomerDeleted(event.data);
+      break;
     case 'checkout.created':
       await handleCheckoutCreated(event.data);
+      break;
+    case 'payment.pending':
+      await handlePaymentPending(event.data);
       break;
     case 'payment.confirmed':
       await handlePaymentConfirmed(event.data);
@@ -61,8 +70,14 @@ export async function POST(request: NextRequest) {
     case 'payment.failed':
       await handlePaymentFailed(event.data);
       break;
+    case 'refund.created':
+      await handleRefundCreated(event.data);
+      break;
     case 'refund.succeeded':
       await handleRefundSucceeded(event.data);
+      break;
+    case 'refund.failed':
+      await handleRefundFailed(event.data);
       break;
     default:
       console.log('Unhandled event:', event.type);
@@ -134,9 +149,15 @@ interface WebhooksModalProps {
 
 const WEBHOOK_EVENTS = [
   { id: "customer.created", label: "Customer Created" },
+  { id: "customer.updated", label: "Customer Updated" },
+  { id: "customer.deleted", label: "Customer Deleted" },
   { id: "checkout.created", label: "Checkout Created" },
+  { id: "payment.pending", label: "Payment Pending" },
   { id: "payment.confirmed", label: "Payment Confirmed" },
   { id: "payment.failed", label: "Payment Failed" },
+  { id: "refund.created", label: "Refund Created" },
+  { id: "refund.succeeded", label: "Refund Succeeded" },
+  { id: "refund.failed", label: "Refund Failed" },
 ] as const satisfies { id: WebhookEvent[number]; label: string }[];
 
 export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
