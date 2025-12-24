@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { retrieveWebhooks } from "@/actions/webhook";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
@@ -11,7 +12,9 @@ import { Button } from "@/components/ui/button";
 import type { ChartConfig } from "@/components/ui/chart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WebHooksModal } from "@/components/webhook/webhooks-modal";
+import { Network } from "@/db";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   Activity,
@@ -40,59 +43,10 @@ type WebhookDestination = {
   errorRate: number;
 };
 
-const mockWebhooks: WebhookDestination[] = [
-  {
-    id: "1",
-    name: "Leadmash_custom",
-    url: "https://leadmash-backend-custom.onrender.com/api/stripe/webhook",
-    status: "active",
-    eventCount: 3,
-    eventsFrom: "account",
-    activity: [10, 12, 11, 13, 10],
-    responseTime: [150, 145, 152, 148, 150],
-    errorRate: 0,
-  },
-  {
-    id: "2",
-    name: "LM",
-    url: "https://leadmash-backend.onrender.com/api/stripe/webhook",
-    status: "active",
-    eventCount: 3,
-    eventsFrom: "account",
-    activity: [8, 9, 8, 10, 9],
-    responseTime: [200, 195, 205, 198, 200],
-    errorRate: 0,
-  },
-  {
-    id: "3",
-    name: "N8N Main",
-    url: "https://api.leadtechpros.com/webhook/dropleads-stripe",
-    status: "active",
-    eventCount: 11,
-    eventsFrom: "account",
-    activity: [25, 30, 22, 28, 35, 20, 32],
-    responseTime: [180, 200, 175, 190, 185, 195, 180],
-    errorRate: 0,
-  },
-  {
-    id: "4",
-    name: "",
-    url: "https://app.dropleads.io/api/webhook/stripe",
-    status: "disabled",
-    eventCount: 6,
-    eventsFrom: "account",
-    errorRate: 0,
-  },
-  {
-    id: "5",
-    name: "",
-    url: "https://leadmash.io/index.php?flu...i_notify=1&payment_method=",
-    status: "disabled",
-    eventCount: 7,
-    eventsFrom: "account",
-    errorRate: 0,
-  },
-];
+// TODO: Get organizationId and environment from context/session
+// For now using placeholder values - these should be obtained from user session or context
+const ORGANIZATION_ID = "org_placeholder";
+const ENVIRONMENT: Network = "testnet";
 
 const StatusBadge = ({ status }: { status: WebhookDestination["status"] }) => {
   return (
@@ -298,15 +252,41 @@ const columns: ColumnDef<WebhookDestination>[] = [
 
 export default function WebhooksPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(true);
   const router = useRouter();
 
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
+  // Fetch webhooks using React Query
+  const {
+    data: webhooksData = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["webhooks", ORGANIZATION_ID, ENVIRONMENT],
+    queryFn: async () => {
+      try {
+        return await retrieveWebhooks(ORGANIZATION_ID, ENVIRONMENT);
+      } catch (error) {
+        // If no webhooks found, return empty array instead of throwing
+        if (
+          error instanceof Error &&
+          error.message === "Failed to retrieve webhooks"
+        ) {
+          return [];
+        }
+        throw error;
+      }
+    },
+  });
+
+  // Transform webhooks data to match WebhookDestination type
+  const webhooks: WebhookDestination[] = webhooksData.map((webhook) => ({
+    id: webhook.id,
+    name: webhook.name || "",
+    url: webhook.url,
+    status: webhook.isDisabled ? "disabled" : "active",
+    eventCount: webhook.events?.length || 0,
+    eventsFrom: "account" as const,
+    errorRate: 0,
+  }));
 
   const tableActions: TableAction<WebhookDestination>[] = [
     {
@@ -452,7 +432,7 @@ export default function WebhooksPage() {
                 <TabsContent value="webhooks" className="mt-6">
                   <DataTable
                     columns={columns}
-                    data={mockWebhooks}
+                    data={webhooks}
                     enableBulkSelect={true}
                     actions={tableActions}
                     isLoading={isLoading}
@@ -468,7 +448,12 @@ export default function WebhooksPage() {
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
-      <WebHooksModal open={isModalOpen} onOpenChange={setIsModalOpen} />
+      <WebHooksModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        organizationId={ORGANIZATION_ID}
+        environment={ENVIRONMENT}
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { findOrCreateAsset, postProduct, retrieveProducts } from "@/actions/product";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
@@ -31,7 +32,9 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
+import { Network } from "@/db";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Column, ColumnDef } from "@tanstack/react-table";
 import {
   Archive,
@@ -50,6 +53,7 @@ import {
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as RHF from "react-hook-form";
+import { useWatch } from "react-hook-form";
 import { z } from "zod";
 
 type Product = {
@@ -93,53 +97,10 @@ const productSchema = z.object({
 
 type ProductFormData = z.infer<typeof productSchema>;
 
-const mockProducts: Product[] = [
-  {
-    id: "1",
-    name: "35",
-    pricing: { amount: "35.00", asset: "USD" },
-    status: "active",
-    createdAt: new Date("2024-12-11"),
-    updatedAt: new Date("2024-12-11"),
-  },
-  {
-    id: "2",
-    name: "Mailboxes",
-    pricing: {
-      amount: "160.00",
-      asset: "USD",
-      isRecurring: true,
-      period: "month",
-    },
-    status: "active",
-    createdAt: new Date("2024-11-21"),
-    updatedAt: new Date("2024-11-21"),
-  },
-  {
-    id: "3",
-    name: "Domains",
-    pricing: { amount: "95.00", asset: "USD" },
-    status: "active",
-    createdAt: new Date("2024-11-19"),
-    updatedAt: new Date("2024-11-19"),
-  },
-  {
-    id: "4",
-    name: "Mailboxes-Harry",
-    pricing: { amount: "361.40", asset: "USD" },
-    status: "active",
-    createdAt: new Date("2024-11-17"),
-    updatedAt: new Date("2024-11-17"),
-  },
-  {
-    id: "5",
-    name: "21",
-    pricing: { amount: "21.00", asset: "USD" },
-    status: "active",
-    createdAt: new Date("2024-11-10"),
-    updatedAt: new Date("2024-11-10"),
-  },
-];
+// TODO: Get organizationId and environment from context/session
+// For now using placeholder values - these should be obtained from user session or context
+const ORGANIZATION_ID = "org_placeholder";
+const ENVIRONMENT: Network = "testnet";
 
 const SortableHeader = ({
   column,
@@ -258,13 +219,48 @@ function ProductsPageContent() {
     null
   );
 
+  // Fetch products using React Query
+  const {
+    data: productsData = [],
+    isLoading,
+  } = useQuery({
+    queryKey: ["products", ORGANIZATION_ID, ENVIRONMENT],
+    queryFn: () => retrieveProducts(ORGANIZATION_ID, ENVIRONMENT),
+  });
+
+  // Transform database products to page Product type
+  const transformedProducts: Product[] = React.useMemo(() => {
+    return productsData.map((dbProduct: any) => {
+      const metadata = (dbProduct.metadata as Record<string, any>) || {};
+      const priceAmount = metadata.priceAmount || "0";
+      const assetCode = dbProduct.asset?.code || "XLM";
+      const isRecurring = dbProduct.billingType === "recurring";
+      const period = metadata.recurringPeriod || undefined;
+
+      return {
+        id: dbProduct.id,
+        name: dbProduct.name,
+        pricing: {
+          amount: priceAmount,
+          asset: assetCode,
+          isRecurring,
+          period,
+        },
+        status: dbProduct.status as "active" | "archived",
+        createdAt: dbProduct.createdAt,
+        updatedAt: dbProduct.updatedAt,
+      };
+    });
+  }, [productsData]);
+
   const stats = React.useMemo(
     () => ({
-      all: mockProducts.length,
-      active: mockProducts.filter((p) => p.status === "active").length,
-      archived: mockProducts.filter((p) => p.status === "archived").length,
+      all: transformedProducts.length,
+      active: transformedProducts.filter((p) => p.status === "active").length,
+      archived: transformedProducts.filter((p) => p.status === "archived")
+        .length,
     }),
-    []
+    [transformedProducts]
   );
 
   const handleModalChange = React.useCallback(
@@ -368,9 +364,10 @@ function ProductsPageContent() {
             <div className="border-border/50 overflow-hidden rounded-lg border">
               <DataTable
                 columns={columns}
-                data={mockProducts}
+                data={transformedProducts}
                 actions={tableActions}
                 enableBulkSelect
+                isLoading={isLoading}
               />
             </div>
 
@@ -385,8 +382,6 @@ function ProductsPageContent() {
     </div>
   );
 }
-
-// --- Main Page Component ---
 
 export default function ProductsPage() {
   return (
@@ -407,9 +402,9 @@ function ProductsModal({
   onOpenChange: (value: boolean) => void;
   editingProduct?: Product | null;
 }) {
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isLearnMoreOpen, setIsLearnMoreOpen] = React.useState(false);
   const isEditMode = !!editingProduct;
+  const queryClient = useQueryClient();
 
   const form = RHF.useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -464,19 +459,87 @@ function ProductsModal({
     }
   }, [open, editingProduct, form]);
 
-  const watched = form.watch();
-  const total = parseFloat(watched.price?.amount) || 0;
+  // Create product mutation
+  const createProductMutation = useMutation({
+    mutationFn: async (data: ProductFormData) => {
+      // Find or create asset
+      const assetId = await findOrCreateAsset(
+        data.price.asset as "XLM" | "USDC",
+        ENVIRONMENT
+      );
+
+      // Transform billingCycle to billingType
+      const billingTypeMap: Record<string, "one_time" | "recurring" | "metered"> =
+      {
+        "one-time": "one_time",
+        recurring: "recurring",
+        metered: "metered",
+      };
+
+      // Build metadata
+      const metadata: Record<string, any> = {
+        priceAmount: data.price.amount,
+      };
+
+      if (data.recurringPeriod) {
+        metadata.recurringPeriod = data.recurringPeriod;
+      }
+
+      // Build product data
+      const productData: any = {
+        name: data.name,
+        description: data.description || undefined,
+        images: data.images?.map((img) => img.name) || [], // For now, just store file names
+        billingType: billingTypeMap[data.billingCycle] || "one_time",
+        assetId,
+        phoneNumberRequired: data.phoneNumberEnabled,
+        status: "active",
+        organizationId: ORGANIZATION_ID,
+        environment: ENVIRONMENT,
+        metadata,
+      };
+
+      // Add metered billing fields if applicable
+      if (data.billingCycle === "metered") {
+        productData.unit = data.unit || undefined;
+        productData.unitDivisor = data.unitDivisor || undefined;
+        productData.unitsPerCredit = data.unitsPerCredit || 1;
+        productData.creditsGranted = data.creditsGranted || 0;
+      }
+
+      return await postProduct(productData);
+    },
+    onSuccess: () => {
+      // Invalidate and refetch products
+      queryClient.invalidateQueries({
+        queryKey: ["products", ORGANIZATION_ID, ENVIRONMENT],
+      });
+      toast.success(
+        isEditMode ? "Product updated successfully!" : "Product created!"
+      );
+      form.reset();
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      toast.error(
+        isEditMode
+          ? "Failed to update product"
+          : "Failed to create product",
+        {
+          description:
+            error instanceof Error
+              ? error.message
+              : "An unexpected error occurred",
+        } as Parameters<typeof toast.error>[1]
+      );
+    },
+  });
+
+  const watched = useWatch({ control: form.control });
+  const total = parseFloat(watched.price?.amount || "0") || 0;
 
   const onSubmit = async (data: ProductFormData) => {
-    setIsSubmitting(true);
-    console.log({ data, isEditMode, editingProduct });
-    await new Promise((r) => setTimeout(r, 1000)); // Simulate API
-    toast.success(
-      isEditMode ? "Product updated successfully!" : "Product created!"
-    );
-    form.reset();
-    onOpenChange(false);
-    setIsSubmitting(false);
+    createProductMutation.mutate(data);
   };
 
   return (
@@ -490,15 +553,15 @@ function ProductsModal({
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
+              disabled={createProductMutation.isPending}
             >
               Cancel
             </Button>
             <Button
               onClick={form.handleSubmit(onSubmit)}
-              disabled={isSubmitting}
+              disabled={createProductMutation.isPending}
             >
-              {isSubmitting && (
+              {createProductMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}{" "}
               {isEditMode ? "Update product" : "Add product"}
@@ -780,7 +843,7 @@ function ProductsModal({
                       Total Price
                     </span>
                     <span className="font-bold">
-                      {total.toFixed(2)} {watched.price.asset}
+                      {total.toFixed(2)} {watched.price?.asset || "XLM"}
                     </span>
                   </div>
                   {watched.billingCycle === "recurring" && (
