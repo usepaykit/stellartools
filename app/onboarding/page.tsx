@@ -5,6 +5,7 @@ import * as React from "react";
 import { FileUploadPicker, type FileWithPreview } from "@/components/file-upload-picker";
 import type { FileRejection } from "react-dropzone";
 import { PhoneNumberPicker } from "@/components/phone-number-picker";
+import { TagInputPicker } from "@/components/tag-input-picker";
 import { TextAreaField, TextField } from "@/components/input-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import * as RHF from "react-hook-form";
@@ -71,9 +72,19 @@ const organizationSchema = z.object({
 
 type OrganizationFormData = z.infer<typeof organizationSchema>;
 
+const teamInviteSchema = z.object({
+  emails: z
+    .array(z.string().email("Please enter a valid email address"))
+    .min(0)
+    .default([])
+    .optional(),
+});
+
 export default function CreateOrganization() {
   const router = useRouter();
+  const [step, setStep] = React.useState<"organization" | "team">("organization");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [createdOrganization, setCreatedOrganization] = React.useState<OrganizationFormData | null>(null);
 
   const form = RHF.useForm<OrganizationFormData>({
     resolver: zodResolver(organizationSchema),
@@ -91,7 +102,6 @@ export default function CreateOrganization() {
     },
   });
 
-  // Generate slug from name
   // eslint-disable-next-line react-hooks/incompatible-library
   const watchedName = form.watch("name");
   React.useEffect(() => {
@@ -120,6 +130,13 @@ export default function CreateOrganization() {
     }
   };
 
+  const teamInviteForm = RHF.useForm({
+    resolver: zodResolver(teamInviteSchema),
+    defaultValues: {
+      emails: [] as string[],
+    },
+  });
+
   const onSubmit = async (data: OrganizationFormData) => {
     setIsSubmitting(true);
 
@@ -137,10 +154,12 @@ export default function CreateOrganization() {
       });
 
       toast.success("Organization created successfully!", {
-        description: "Redirecting to your dashboard...",
+        description: "Now invite your team members",
       } as Parameters<typeof toast.success>[1]);
 
-      router.push(`/onboarding/${data.slug}`);
+      setCreatedOrganization(data);
+      setStep("team");
+      setIsSubmitting(false);
     } catch (error) {
       console.error("Failed to create organization:", error);
       toast.error("Failed to create organization", {
@@ -149,6 +168,131 @@ export default function CreateOrganization() {
       setIsSubmitting(false);
     }
   };
+
+  const onTeamInviteSubmit = async (data: { emails?: string[] }) => {
+    setIsSubmitting(true);
+
+    try {
+      console.log("Inviting team members:", {
+        emails: data.emails,
+        organizationId: createdOrganization?.slug,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      const emailCount = data.emails?.length || 0;
+      toast.success("Team invitations sent!", {
+        description: `${emailCount} invitation${emailCount !== 1 ? "s" : ""} sent successfully.`,
+      } as Parameters<typeof toast.success>[1]);
+
+      router.push(`/dashboard`);
+    } catch (error) {
+      console.error("Failed to send invitations:", error);
+      toast.error("Failed to send invitations", {
+        description: "Please try again later",
+      } as Parameters<typeof toast.error>[1]);
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSkipTeamInvite = () => {
+    router.push(`/onboarding/${createdOrganization?.slug}`);
+  };
+
+  if (step === "team") {
+    return (
+      <div className="bg-background flex min-h-screen flex-col items-center justify-center p-4">
+        <div className="flex w-full max-w-2xl flex-col items-center">
+          <div className="mb-8 transition-opacity duration-300">
+            <Image
+              src="/images/logo-light.png"
+              alt="Stellar Tools logo"
+              width={80}
+              height={80}
+              className="rounded-md object-contain"
+              priority
+            />
+          </div>
+
+          <div className="mb-8 text-center">
+            <h1 className="text-foreground mb-2 text-3xl font-semibold tracking-tight">
+              Invite your team
+            </h1>
+            <p className="text-muted-foreground text-lg">
+              Add team members to collaborate on your organization
+            </p>
+          </div>
+
+          <form
+            onSubmit={teamInviteForm.handleSubmit(onTeamInviteSubmit)}
+            className="w-full space-y-6"
+            noValidate
+          >
+            <Card className="border-none shadow-none">
+              <CardContent className="space-y-5 pt-1">
+                <RHF.Controller
+                  control={teamInviteForm.control}
+                  name="emails"
+                  render={({ field, fieldState: { error } }) => (
+                    <div className="space-y-2">
+                      <Label htmlFor="team-emails" className="text-sm font-medium">
+                        Team Member Emails
+                      </Label>
+                      <TagInputPicker
+                        value={field.value || []}
+                        onChange={field.onChange}
+                        placeholder="Enter email addresses (press Enter or comma to add)"
+                        className="w-full"
+                      />
+                      {error && (
+                        <p className="text-destructive text-sm" role="alert">
+                          {error.message}
+                        </p>
+                      )}
+                      <p className="text-muted-foreground text-xs">
+                        Invite team members by entering their email addresses. They will receive an invitation to join your organization.
+                      </p>
+                    </div>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            <div className="flex w-full items-center justify-between gap-4">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleSkipTeamInvite}
+                disabled={isSubmitting}
+                className="gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Skip for now
+              </Button>
+              <Button
+                type="submit"
+                className="gap-2"
+                size="lg"
+                disabled={isSubmitting || ((teamInviteForm.watch("emails") as string[] | undefined)?.length || 0) === 0}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    Continue
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-background flex min-h-screen flex-col items-center justify-center p-4">
