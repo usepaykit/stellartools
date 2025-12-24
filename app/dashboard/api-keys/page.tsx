@@ -491,6 +491,7 @@ function ApiKeyModal({
             required
             className="shadow-none"
           />
+  
 
           <div className="bg-muted/50 border-border rounded-lg border p-4">
             <p className="text-muted-foreground text-sm">
