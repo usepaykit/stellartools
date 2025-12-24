@@ -185,10 +185,23 @@ export const billingTypeEnum = pgEnum("billing_type", [
   "metered",
 ]);
 
+export type BillingType = (typeof billingTypeEnum.enumValues)[number];
+
 export const productStatusEnum = pgEnum("product_status", [
   "active",
   "archived",
 ]);
+
+export type ProductStatus = (typeof productStatusEnum.enumValues)[number];
+
+export const recurringPeriodEnum = pgEnum("recurring_period", [
+  "day",
+  "week",
+  "month",
+  "year",
+]);
+
+export type RecurringPeriod = (typeof recurringPeriodEnum.enumValues)[number];
 
 export const products = pgTable("product", {
   id: text("id").primaryKey(),
@@ -210,6 +223,8 @@ export const products = pgTable("product", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object>().default({}),
   environment: networkEnum("network").notNull(),
+  priceAmount: integer("price_amount").notNull(),
+  recurringPeriod: recurringPeriodEnum("recurring_period"),
 
   // Metered billing
   unit: text("unit"), // e.g., "tokens", "MB", "requests", "images", "minutes"
@@ -353,6 +368,7 @@ export const webhookLogs = pgTable("webhook_log", {
   errorMessage: text("error_message"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  responseTime: integer("response_time"), // in milliseconds
   environment: networkEnum("network").notNull(),
 });
 
