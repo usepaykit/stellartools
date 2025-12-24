@@ -2,10 +2,12 @@
 
 import React from "react";
 
+import { forgotPassword } from "@/actions/auth";
 import { TextField } from "@/components/input-picker";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -19,8 +21,25 @@ const forgotPasswordSchema = z.object({
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPassword() {
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
-
+  const forgotpasswordMutation = useMutation({
+    mutationFn: (email: string) => forgotPassword(email),
+    onSuccess: () => {
+      toast.success("Password reset link sent", {
+        id: "forgot-password-success",
+        description:
+          "Check your email for instructions to reset your password.",
+      });
+    },
+    onError: (error) => {
+      toast.error("Failed to send reset link", {
+        id: "forgot-password-error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Unable to send password reset link. Please try again.",
+      });
+    },
+  });
   const form = useForm<ForgotPasswordFormData>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: {
@@ -29,28 +48,7 @@ export default function ForgotPassword() {
   });
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
-    setIsSubmitting(true);
-
-    try {
-      console.log("Password reset request:", {
-        email: data.email,
-        timestamp: new Date().toISOString(),
-      });
-      toast.success("Password reset link sent", {
-        description:
-          "Check your email for instructions to reset your password.",
-      } as Parameters<typeof toast.success>[1]);
-    } catch (error) {
-      console.error("Password reset error:", error);
-      toast.error("Failed to send reset link", {
-        description:
-          error instanceof Error
-            ? error.message
-            : "Unable to send password reset link. Please try again.",
-      } as Parameters<typeof toast.error>[1]);
-    } finally {
-      setIsSubmitting(false);
-    }
+    forgotpasswordMutation.mutate(data.email);
   };
 
   return (
@@ -181,9 +179,9 @@ export default function ForgotPassword() {
           <Button
             type="submit"
             className="w-full rounded-md font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg focus:ring-4"
-            disabled={isSubmitting}
+            disabled={forgotpasswordMutation.isPending}
           >
-            {isSubmitting ? (
+            {forgotpasswordMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Sending reset link...

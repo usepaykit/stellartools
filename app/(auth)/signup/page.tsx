@@ -2,7 +2,7 @@
 
 import React from "react";
 
-import { signUp } from "@/actions/auth";
+import { googleSignin, signUp } from "@/actions/auth";
 import { Google } from "@/components/icon";
 import { TextField } from "@/components/input-picker";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
+import { useGoogleOAuth } from "@/hooks/use-google-oauth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
@@ -40,6 +41,12 @@ type SignUpFormData = z.infer<typeof signUpSchema>;
 export default function SignUp() {
   const [showPassword, setShowPassword] = React.useState(false);
   const router = useRouter();
+
+  const { isVerifying } = useGoogleOAuth({
+    defaultIntent: "SIGN_UP",
+    defaultRedirect: "/dashboard",
+  });
+
   const signupMutation = useMutation({
     mutationFn: (data: { name: string; email: string; password: string }) =>
       signUp({
@@ -52,14 +59,15 @@ export default function SignUp() {
         id: "signup-success",
         description: "Redirecting to sign in...",
       });
-        router.push("/dashboard");
-    
+      router.push("/dashboard");
     },
     onError: (error: Error) => {
       toast.error("Sign-up failed", {
         id: "signup-error",
         description:
-          error.message || "Unable to create account. Please try again.",
+          error instanceof Error
+            ? error.message
+            : "Unable to create account. Please try again.",
       });
     },
   });
@@ -78,13 +86,9 @@ export default function SignUp() {
 
   const handleGoogleSignUp = async () => {
     try {
-      console.log("Google sign-up initiated");
-      toast.info("Google sign-up", {
-        id: "google-signup-info",
-        description: "Redirecting to Google authentication...",
-      });
-    } catch (error) {
-      console.error("Google sign-up error:", error);
+      const url = await googleSignin(`${process.env.APP_URL}/auth/signup`);
+      router.push(url);
+    } catch {
       toast.error("Google sign-up failed");
     }
   };
@@ -198,6 +202,7 @@ export default function SignUp() {
             variant="ghost"
             onClick={handleGoogleSignUp}
             className="hover:bg-muted flex w-full items-center gap-2.5 rounded-lg border px-10 py-2.5 shadow-none transition-colors"
+            disabled={isVerifying || signupMutation.isPending}
           >
             <Google className="h-5 w-5" />
             <span className="text-foreground text-sm font-semibold">
@@ -299,12 +304,12 @@ export default function SignUp() {
           <Button
             type="submit"
             className="w-full rounded-md font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg focus:ring-4"
-            disabled={signupMutation.isPending}
+            disabled={signupMutation.isPending || isVerifying}
           >
-            {signupMutation.isPending ? (
+            {signupMutation.isPending || isVerifying ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating account...
+                {isVerifying ? "Verifying..." : "Creating account..."}
               </>
             ) : (
               "Sign up"
@@ -335,7 +340,7 @@ export default function SignUp() {
             <p className="text-muted-foreground text-sm">
               Already have an account?{" "}
               <Link
-                href="/auth/signin"
+                href="/signin"
                 className="hover:text-foreground font-semibold underline transition-colors"
               >
                 Sign in

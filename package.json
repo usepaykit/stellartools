@@ -50,6 +50,7 @@
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
     "framer-motion": "^12.23.26",
+    "google-auth-library": "^10.5.0",
     "heic-to": "^1.3.0",
     "katex": "^0.16.27",
     "lucide-react": "^0.552.0",

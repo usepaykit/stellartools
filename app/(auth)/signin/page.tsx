@@ -2,7 +2,7 @@
 
 import React from "react";
 
-import { signIn } from "@/actions/auth";
+import { googleSignin, signIn } from "@/actions/auth";
 import { Google } from "@/components/icon";
 import { TextField } from "@/components/input-picker";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
+import { useGoogleOAuth } from "@/hooks/use-google-oauth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
@@ -38,6 +39,10 @@ type SignInFormData = z.infer<typeof signInSchema>;
 export default function SignIn() {
   const [showPassword, setShowPassword] = React.useState(false);
   const router = useRouter();
+  const { isVerifying } = useGoogleOAuth({
+    defaultIntent: "SIGN_IN",
+    defaultRedirect: "/dashboard",
+  });
   const signinMutation = useMutation({
     mutationFn: (data: { email: string; password: string }) => signIn(data),
     onSuccess: () => {
@@ -66,12 +71,9 @@ export default function SignIn() {
 
   const handleGoogleSignIn = async () => {
     try {
-      console.log("Google sign-in initiated");
-      toast.info("Google sign-in", {
-        description: "Redirecting to Google authentication...",
-      } as Parameters<typeof toast.info>[1]);
-    } catch (error) {
-      console.error("Google sign-in error:", error);
+      const url = await googleSignin(`${process.env.APP_URL}/auth/signin`);
+      router.push(url);
+    } catch {
       toast.error("Google sign-in failed");
     }
   };
@@ -176,6 +178,7 @@ export default function SignIn() {
             variant="ghost"
             onClick={handleGoogleSignIn}
             className="hover:bg-muted flex w-full items-center gap-2.5 rounded-lg border px-10 py-2.5 shadow-none transition-colors"
+            disabled={isVerifying || signinMutation.isPending}
           >
             <Google className="h-5 w-5" />
             <span className="text-foreground text-sm font-semibold">
@@ -214,7 +217,7 @@ export default function SignIn() {
                 Password
               </Label>
               <Link
-                href="/auth/forgot-password"
+                href="/forgot-password"
                 className="hover:text-foreground text-sm font-semibold underline transition-colors"
               >
                 Forgot password?
@@ -287,12 +290,12 @@ export default function SignIn() {
           <Button
             type="submit"
             className="w-full rounded-md font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg focus:ring-4"
-            disabled={signinMutation.isPending}
+            disabled={signinMutation.isPending || isVerifying}
           >
-            {signinMutation.isPending ? (
+            {signinMutation.isPending || isVerifying ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Signing in...
+                {isVerifying ? "Verifying..." : "Signing in..."}
               </>
             ) : (
               "Sign in"
@@ -322,7 +325,7 @@ export default function SignIn() {
             <p className="text-muted-foreground text-sm">
               Don&apos;t have an account?{" "}
               <Link
-                href="/auth/signup"
+                href="/signup"
                 className="hover:text-foreground font-semibold underline transition-colors"
               >
                 Sign up
