@@ -1,3 +1,4 @@
+import { Providers } from "@/components/provider";
 import { Toaster } from "@/components/ui/toast";
 import "katex/dist/katex.min.css";
 import type { Metadata } from "next";
@@ -38,8 +39,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${rosemary.variable} antialiased`}
       >
-        {children}
-        <Toaster position="bottom-right" />
+        <Providers>
+          {children}
+          <Toaster position="bottom-right" />
+        </Providers>
       </body>
     </html>
   );
