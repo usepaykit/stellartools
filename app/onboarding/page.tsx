@@ -2,11 +2,13 @@
 
 import * as React from "react";
 
-import { FileUploadPicker, type FileWithPreview } from "@/components/file-upload-picker";
-import type { FileRejection } from "react-dropzone";
+import {
+  FileUploadPicker,
+  type FileWithPreview,
+} from "@/components/file-upload-picker";
+import { TextAreaField, TextField } from "@/components/input-picker";
 import { PhoneNumberPicker } from "@/components/phone-number-picker";
 import { TagInputPicker } from "@/components/tag-input-picker";
-import { TextAreaField, TextField } from "@/components/input-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -22,11 +24,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import type { FileRejection } from "react-dropzone";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 
 const organizationSchema = z.object({
-  name: z.string().min(1, "Name is required").min(2, "Name must be at least 2 characters").max(100, "Name must be less than 100 characters").trim(),
+  name: z
+    .string()
+    .min(1, "Name is required")
+    .min(2, "Name must be at least 2 characters")
+    .max(100, "Name must be less than 100 characters")
+    .trim(),
   slug: z
     .string()
     .min(1)
@@ -48,8 +56,16 @@ const organizationSchema = z.object({
     })
     .optional()
     .nullable(),
-  description: z.string().max(500, "Description must be less than 500 characters").optional().or(z.literal("")),
-  physicalAddress: z.string().max(500, "Address must be less than 500 characters").optional().or(z.literal("")),
+  description: z
+    .string()
+    .max(500, "Description must be less than 500 characters")
+    .optional()
+    .or(z.literal("")),
+  physicalAddress: z
+    .string()
+    .max(500, "Address must be less than 500 characters")
+    .optional()
+    .or(z.literal("")),
   supportEmail: z.email().optional(),
   twitterHandle: z
     .string()
@@ -58,7 +74,10 @@ const organizationSchema = z.object({
     .or(z.literal("")),
   githubHandle: z
     .string()
-    .regex(/^[a-zA-Z0-9]([a-zA-Z0-9]|-(?![.-])){0,38}[a-zA-Z0-9]$/, "Please enter a valid GitHub username")
+    .regex(
+      /^[a-zA-Z0-9]([a-zA-Z0-9]|-(?![.-])){0,38}[a-zA-Z0-9]$/,
+      "Please enter a valid GitHub username"
+    )
     .optional(),
   logo: z
     .array(z.any())
@@ -82,9 +101,12 @@ const teamInviteSchema = z.object({
 
 export default function CreateOrganization() {
   const router = useRouter();
-  const [step, setStep] = React.useState<"organization" | "team">("organization");
+  const [step, setStep] = React.useState<"organization" | "team">(
+    "organization"
+  );
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [createdOrganization, setCreatedOrganization] = React.useState<OrganizationFormData | null>(null);
+  const [createdOrganization, setCreatedOrganization] =
+    React.useState<OrganizationFormData | null>(null);
 
   const form = RHF.useForm<OrganizationFormData>({
     resolver: zodResolver(organizationSchema),
@@ -235,7 +257,10 @@ export default function CreateOrganization() {
                   name="emails"
                   render={({ field, fieldState: { error } }) => (
                     <div className="space-y-2">
-                      <Label htmlFor="team-emails" className="text-sm font-medium">
+                      <Label
+                        htmlFor="team-emails"
+                        className="text-sm font-medium"
+                      >
                         Team Member Emails
                       </Label>
                       <TagInputPicker
@@ -250,7 +275,9 @@ export default function CreateOrganization() {
                         </p>
                       )}
                       <p className="text-muted-foreground text-xs">
-                        Invite team members by entering their email addresses. They will receive an invitation to join your organization.
+                        Invite team members by entering their email addresses.
+                        They will receive an invitation to join your
+                        organization.
                       </p>
                     </div>
                   )}
@@ -273,7 +300,11 @@ export default function CreateOrganization() {
                 type="submit"
                 className="gap-2"
                 size="lg"
-                disabled={isSubmitting || ((teamInviteForm.watch("emails") as string[] | undefined)?.length || 0) === 0}
+                disabled={
+                  isSubmitting ||
+                  ((teamInviteForm.watch("emails") as string[] | undefined)
+                    ?.length || 0) === 0
+                }
               >
                 {isSubmitting ? (
                   <>
@@ -324,14 +355,15 @@ export default function CreateOrganization() {
         >
           <Card className="border-none shadow-none">
             <CardContent className="space-y-5 pt-1">
-      
               <div className="pb-24">
                 <RHF.Controller
                   control={form.control}
                   name="logo"
                   render={({ field, fieldState: { error } }) => (
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">Organization Logo</Label>
+                      <Label className="text-sm font-medium">
+                        Organization Logo
+                      </Label>
                       <FileUploadPicker
                         id="organization-logo"
                         value={field.value || []}
@@ -373,7 +405,7 @@ export default function CreateOrganization() {
                     error={error?.message || null}
                     labelClassName="text-sm font-medium"
                     required
-                      className="w-full shadow-none"
+                    className="w-full shadow-none"
                   />
                 )}
               />
@@ -393,7 +425,6 @@ export default function CreateOrganization() {
                     labelClassName="text-sm font-medium"
                     disabled
                     helpText="This will be used for your subdomain and cannot be changed later."
-                      
                   />
                 )}
               />
@@ -410,7 +441,7 @@ export default function CreateOrganization() {
                     placeholder="Tell us about your organization..."
                     error={error?.message || null}
                     helpText="Optional: A brief description of your organization"
-                      className="w-full shadow-none"
+                    className="w-full shadow-none"
                   />
                 )}
               />
@@ -427,7 +458,7 @@ export default function CreateOrganization() {
                       onChange={field.onChange}
                       error={error?.message || null}
                       disabled={isSubmitting}
-                       groupClassName="w-full shadow-none"
+                      groupClassName="w-full shadow-none"
                     />
                   )}
                 />
@@ -444,8 +475,7 @@ export default function CreateOrganization() {
                       onChange={field.onChange}
                       placeholder="support@example.com"
                       error={error?.message || null}
-                
-                      className="w-full shadow-none mt-2"
+                      className="mt-2 w-full shadow-none"
                     />
                   )}
                 />
@@ -462,7 +492,7 @@ export default function CreateOrganization() {
                     onChange={field.onChange}
                     placeholder="123 Main St, City, State, ZIP"
                     error={error?.message || null}
-                      className="w-full shadow-none"
+                    className="w-full shadow-none"
                   />
                 )}
               />
@@ -486,7 +516,7 @@ export default function CreateOrganization() {
                         <InputGroup
                           className={cn(
                             error && "border-destructive ring-destructive/20",
-                             "w-full shadow-none"
+                            "w-full shadow-none"
                           )}
                         >
                           <InputGroupAddon align="inline-start">
