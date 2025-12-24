@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { retrieveWebhooks } from "@/actions/webhook";
+import { getWebhooksWithAnalytics } from "@/actions/webhook";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
@@ -13,6 +13,7 @@ import type { ChartConfig } from "@/components/ui/chart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WebHooksModal } from "@/components/webhook/webhooks-modal";
 import { Network } from "@/db";
+import { Webhook as WebhookSchema } from "@/db";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
@@ -31,34 +32,33 @@ import {
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-type WebhookDestination = {
-  id: string;
-  name: string;
-  url: string;
-  status: "active" | "disabled";
+interface WebhookDestination extends Pick<
+  WebhookSchema,
+  "id" | "name" | "url" | "isDisabled"
+> {
   eventCount: number;
   eventsFrom: "account" | "test";
   activity?: number[];
   responseTime?: number[];
   errorRate: number;
-};
+}
 
 // TODO: Get organizationId and environment from context/session
 // For now using placeholder values - these should be obtained from user session or context
 const ORGANIZATION_ID = "org_placeholder";
 const ENVIRONMENT: Network = "testnet";
 
-const StatusBadge = ({ status }: { status: WebhookDestination["status"] }) => {
+const StatusBadge = ({ isDisabled }: { isDisabled: boolean }) => {
   return (
     <Badge
-      variant={status === "active" ? "default" : "secondary"}
+      variant={isDisabled ? "secondary" : "default"}
       className={cn(
-        status === "active"
+        isDisabled
           ? "border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
           : "bg-muted text-muted-foreground"
       )}
     >
-      {status === "active" ? "Active" : "Disabled"}
+      {isDisabled ? "Disabled" : "Active"}
     </Badge>
   );
 };
@@ -196,7 +196,7 @@ const columns: ColumnDef<WebhookDestination>[] = [
       const webhook = row.original;
       return (
         <div className="flex items-center gap-2">
-          <StatusBadge status={webhook.status} />
+          <StatusBadge isDisabled={webhook.isDisabled} />
           <span className="text-muted-foreground text-sm">
             {webhook.eventCount} event{webhook.eventCount !== 1 ? "s" : ""}
           </span>
@@ -255,39 +255,22 @@ export default function WebhooksPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Fetch webhooks using React Query
-  const {
-    data: webhooksData = [],
-    isLoading,
-    error,
-  } = useQuery({
+  const { data: webhooks = [], isLoading } = useQuery({
     queryKey: ["webhooks", ORGANIZATION_ID, ENVIRONMENT],
     queryFn: async () => {
-      try {
-        return await retrieveWebhooks(ORGANIZATION_ID, ENVIRONMENT);
-      } catch (error) {
-        // If no webhooks found, return empty array instead of throwing
-        if (
-          error instanceof Error &&
-          error.message === "Failed to retrieve webhooks"
-        ) {
-          return [];
-        }
-        throw error;
-      }
+      return await getWebhooksWithAnalytics(ORGANIZATION_ID, ENVIRONMENT);
+    },
+    select: (webhooksData) => {
+      return webhooksData.map((webhook) => ({
+        ...webhook,
+        logsCount: webhook.logsCount ?? 0,
+        eventsFrom: "account" as const,
+        eventCount: webhook.logsCount ?? 0,
+        errorRate: 0,
+        activity: [],
+      }));
     },
   });
-
-  // Transform webhooks data to match WebhookDestination type
-  const webhooks: WebhookDestination[] = webhooksData.map((webhook) => ({
-    id: webhook.id,
-    name: webhook.name || "",
-    url: webhook.url,
-    status: webhook.isDisabled ? "disabled" : "active",
-    eventCount: webhook.events?.length || 0,
-    eventsFrom: "account" as const,
-    errorRate: 0,
-  }));
 
   React.useEffect(() => {
     if (searchParams.get("create") === "true") {
@@ -349,7 +332,10 @@ export default function WebhooksPage() {
                     services.
                   </p>
                 </div>
-                <Button className="gap-2" onClick={() => handleModalChange(true)}>
+                <Button
+                  className="gap-2"
+                  onClick={() => handleModalChange(true)}
+                >
                   <Plus className="h-4 w-4" />
                   <span className="hidden sm:inline">Add destination</span>
                   <span className="sm:hidden">Add</span>

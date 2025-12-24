@@ -1,11 +1,12 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import * as React from "react";
 
-function makeQueryClient() {
-  return new QueryClient({
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+
+export function QueryProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
         staleTime: 60 * 1000, // 1 minute
@@ -13,23 +14,6 @@ function makeQueryClient() {
       },
     },
   });
-}
-
-let browserQueryClient: QueryClient | undefined = undefined;
-
-function getQueryClient() {
-  if (typeof window === "undefined") {
-    // Server: always make a new query client
-    return makeQueryClient();
-  } else {
-    // Browser: use singleton pattern to keep the same query client
-    if (!browserQueryClient) browserQueryClient = makeQueryClient();
-    return browserQueryClient;
-  }
-}
-
-export function QueryProvider({ children }: { children: React.ReactNode }) {
-  const queryClient = getQueryClient();
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -40,4 +24,3 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     </QueryClientProvider>
   );
 }
-

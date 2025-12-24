@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { postProduct, retrieveProductsWithAssets } from "@/actions/product";
+import { postProduct, retrieveProductsWithAsset } from "@/actions/product";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
@@ -32,7 +32,8 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
-import { Network } from "@/db";
+import { Network, RecurringPeriod } from "@/db";
+import { Product as ProductSchema } from "@/db";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Column, ColumnDef } from "@tanstack/react-table";
@@ -56,19 +57,17 @@ import * as RHF from "react-hook-form";
 import { useWatch } from "react-hook-form";
 import { z } from "zod";
 
-type Product = {
-  id: string;
-  name: string;
+interface Product extends Pick<
+  ProductSchema,
+  "id" | "name" | "status" | "createdAt" | "updatedAt"
+> {
   pricing: {
-    amount: string;
+    amount: number;
     asset: string;
     isRecurring?: boolean;
-    period?: string;
+    period: RecurringPeriod | undefined;
   };
-  status: "active" | "archived";
-  createdAt: Date;
-  updatedAt: Date;
-};
+}
 
 const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -188,8 +187,7 @@ const columns: ColumnDef<Product>[] = [
       );
     },
     sortingFn: (rowA, rowB) =>
-      parseFloat(rowA.original.pricing.amount) -
-      parseFloat(rowB.original.pricing.amount),
+      rowA.original.pricing.amount - rowB.original.pricing.amount,
   },
   {
     accessorKey: "createdAt",
@@ -219,33 +217,23 @@ function ProductsPageContent() {
     null
   );
 
-  // Fetch products using React Query with data transformation
-  const {
-    data: transformedProducts,
-    isLoading,
-  } = useQuery({
+  const { data: products, isLoading } = useQuery({
     queryKey: ["products", ORGANIZATION_ID, ENVIRONMENT],
-    queryFn: () => retrieveProductsWithAssets(ORGANIZATION_ID, ENVIRONMENT),
+    queryFn: () => retrieveProductsWithAsset(ORGANIZATION_ID, ENVIRONMENT),
     select: (productsData) => {
-      return productsData.map((dbProduct: any) => {
-        const metadata = dbProduct.metadata!;
-        const priceAmount = metadata.priceAmount!;
-        const assetCode = dbProduct.asset!.code!;
-        const isRecurring = dbProduct.billingType === "recurring";
-        const period = metadata.recurringPeriod;
-
+      return productsData.map(({ product, asset }) => {
         return {
-          id: dbProduct.id,
-          name: dbProduct.name,
+          id: product.id,
+          name: product.name,
           pricing: {
-            amount: priceAmount,
-            asset: assetCode,
-            isRecurring,
-            period,
+            amount: product.priceAmount,
+            asset: asset.code,
+            isRecurring: product.billingType === "recurring",
+            period: product.recurringPeriod!,
           },
-          status: dbProduct.status,
-          createdAt: dbProduct.createdAt,
-          updatedAt: dbProduct.updatedAt,
+          status: product.status,
+          createdAt: product.createdAt,
+          updatedAt: product.updatedAt,
         };
       });
     },
@@ -253,12 +241,11 @@ function ProductsPageContent() {
 
   const stats = React.useMemo(
     () => ({
-      all: transformedProducts!.length,
-      active: transformedProducts!.filter((p) => p.status === "active").length,
-      archived: transformedProducts!.filter((p) => p.status === "archived")
-        .length,
+      all: products?.length ?? 0,
+      active: products?.filter((p) => p.status === "active").length ?? 0,
+      archived: products?.filter((p) => p.status === "archived").length ?? 0,
     }),
-    [transformedProducts]
+    [products]
   );
 
   const handleModalChange = React.useCallback(
@@ -362,7 +349,7 @@ function ProductsPageContent() {
             <div className="border-border/50 overflow-hidden rounded-lg border">
               <DataTable
                 columns={columns}
-                data={transformedProducts!}
+                data={products!}
                 actions={tableActions}
                 enableBulkSelect
                 isLoading={isLoading}
@@ -420,31 +407,19 @@ function ProductsModal({
     },
   });
 
-  // Reset form when modal opens/closes or editingProduct changes
   React.useEffect(() => {
     if (open && editingProduct) {
-      // Pre-populate form with product data
       form.reset({
         name: editingProduct.name,
-        description: "",
-        images: [],
-        billingCycle: editingProduct.pricing.isRecurring
-          ? "recurring"
-          : "one_time",
-        recurringPeriod:
-          (editingProduct.pricing.period as
-            | "day"
-            | "week"
-            | "month"
-            | "year") || "month",
+        ...(editingProduct.pricing.isRecurring && {
+          recurringPeriod: editingProduct.pricing.period,
+        }),
         price: {
-          amount: editingProduct.pricing.amount,
+          amount: editingProduct.pricing.amount.toString(),
           asset: editingProduct.pricing.asset,
         },
-        phoneNumberEnabled: false,
       });
     } else if (open && !editingProduct) {
-      // Reset to defaults for create mode
       form.reset({
         name: "",
         description: "",
@@ -457,10 +432,8 @@ function ProductsModal({
     }
   }, [open, editingProduct, form]);
 
-  // Create product mutation
   const createProductMutation = useMutation({
     mutationFn: async (data: ProductFormData) => {
-
       const metadata: Record<string, any> = {
         priceAmount: data.price.amount,
       };
@@ -469,22 +442,27 @@ function ProductsModal({
         metadata.recurringPeriod = data.recurringPeriod;
       }
 
+      const images: Array<string> = []; // todo: upload images to storage and get the url
+
       const productData = {
         name: data.name,
-        description: data.description || undefined,
-        images: data.images!.map((img) => img.name), // For now, just store file names
+        description: data.description,
+        images,
         billingType: data.billingCycle,
-        assetId: data.price!.asset!,
+        assetId: data.price.asset,
         phoneNumberRequired: data.phoneNumberEnabled,
         status: "active" as const,
         organizationId: ORGANIZATION_ID,
         environment: ENVIRONMENT,
         metadata,
-        // Metered billing fields (only set if metered)
-        unit: data.billingCycle === "metered" ? (data.unit || undefined) : undefined,
-        unitDivisor: data.billingCycle === "metered" ? (data.unitDivisor || undefined) : undefined,
-        unitsPerCredit: data.billingCycle === "metered" ? data.unitsPerCredit! : undefined,
-        creditsGranted: data.billingCycle === "metered" ? data.creditsGranted! : undefined,
+        priceAmount: parseFloat(data.price.amount),
+        recurringPeriod: data.recurringPeriod,
+
+        // Meter
+        unit: data.unit,
+        unitDivisor: data.unitDivisor,
+        unitsPerCredit: data.unitsPerCredit,
+        creditsGranted: data.creditsGranted,
       };
 
       return await postProduct(productData);
@@ -502,9 +480,7 @@ function ProductsModal({
     },
     onError: (error) => {
       toast.error(
-        isEditMode
-          ? "Failed to update product"
-          : "Failed to create product",
+        isEditMode ? "Failed to update product" : "Failed to create product",
         {
           description:
             error instanceof Error

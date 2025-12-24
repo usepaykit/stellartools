@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { ApiKey, Network } from "@/db";
+import { useCopy } from "@/hooks/use-copy";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
@@ -34,7 +35,6 @@ import {
 import Link from "next/link";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
-import { useCopy } from "@/hooks/use-copy";
 
 // TODO: Get organizationId and environment from context/session
 // For now using placeholder values - these should be obtained from user session or context
@@ -57,19 +57,14 @@ export default function ApiKeysPage() {
   const [createdApiKey, setCreatedApiKey] = React.useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  // Fetch API keys using React Query
-  const {
-    data: apiKeys = [],
-    isLoading,
-    error,
-  } = useQuery({
+  const { data: apiKeys = [], isLoading } = useQuery({
     queryKey: ["apiKeys", ORGANIZATION_ID, ENVIRONMENT],
     queryFn: () => retrieveApiKeys(ORGANIZATION_ID, ENVIRONMENT),
   });
 
+  const { handleCopy } = useCopy();
+
   const columns: ColumnDef<ApiKey>[] = [
-  const {  handleCopy } = useCopy();
-    const columns: ColumnDef<ApiKey>[] = [
     {
       accessorKey: "name",
       header: "NAME",
@@ -171,7 +166,7 @@ export default function ApiKeysPage() {
     {
       label: "Copy API key ID",
       onClick: (key) => {
-        handleCopy({text: key.id, message: "API key ID copied to clipboard"});
+        handleCopy({ text: key.id, message: "API key ID copied to clipboard" });
       },
     },
     {
@@ -212,7 +207,6 @@ export default function ApiKeysPage() {
       <DashboardSidebar>
         <DashboardSidebarInset>
           <div className="flex flex-col gap-8 p-6">
-            {/* Breadcrumbs */}
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem>
@@ -229,7 +223,6 @@ export default function ApiKeysPage() {
               </BreadcrumbList>
             </Breadcrumb>
 
-            {/* Header */}
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">API keys</h1>
@@ -243,7 +236,6 @@ export default function ApiKeysPage() {
               </Link>
             </div>
 
-            {/* API Keys Section */}
             <div className="space-y-4">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
@@ -274,7 +266,6 @@ export default function ApiKeysPage() {
         </DashboardSidebarInset>
       </DashboardSidebar>
 
-      {/* Modal */}
       <ApiKeyModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
@@ -301,7 +292,7 @@ function ApiKeyModal({
   onApiKeyCreated: (key: string | null) => void;
   queryClient: ReturnType<typeof useQueryClient>;
 }) {
- const { handleCopy } = useCopy();
+  const { handleCopy } = useCopy();
   const form = RHF.useForm<ApiKeyFormData>({
     resolver: zodResolver(apiKeySchema),
     defaultValues: {
@@ -309,12 +300,14 @@ function ApiKeyModal({
     },
   });
 
- const handleCopyKey = async () => {
+  const handleCopyKey = async () => {
     if (createdApiKey) {
-      await handleCopy({text: createdApiKey, message: "API key copied to clipboard"});
+      await handleCopy({
+        text: createdApiKey,
+        message: "API key copied to clipboard",
+      });
     }
   };
-// Create API key mutation
   const createApiKeyMutation = useMutation({
     mutationFn: async (data: ApiKeyFormData) => {
       return await postApiKey({
@@ -326,7 +319,6 @@ function ApiKeyModal({
       });
     },
     onSuccess: (apiKey) => {
-      // Invalidate and refetch API keys
       queryClient.invalidateQueries({
         queryKey: ["apiKeys", ORGANIZATION_ID, ENVIRONMENT],
       });
@@ -336,25 +328,14 @@ function ApiKeyModal({
       } as Parameters<typeof toast.success>[1]);
     },
     onError: (error) => {
+      const errorMessage =
+        error instanceof Error ? error.message : "An unexpected error occurred";
       toast.error("Failed to create API key", {
-        description:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred",
-      } as Parameters<typeof toast.error>[1]);
+        id: "create-api-key-error",
+        description: errorMessage,
+      });
     },
   });
-
-  const handleCopyKey = async () => {
-    if (createdApiKey) {
-      await navigator.clipboard.writeText(createdApiKey);
-      toast.success("API key copied to clipboard");
-    }
-  };
-
-  const onSubmit = async (data: ApiKeyFormData) => {
-    createApiKeyMutation.mutate(data);
-  };
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
@@ -398,7 +379,9 @@ function ApiKeyModal({
                 Cancel
               </Button>
               <Button
-                onClick={form.handleSubmit(onSubmit)}
+                onClick={form.handleSubmit((data) => {
+                  createApiKeyMutation.mutate(data);
+                })}
                 disabled={createApiKeyMutation.isPending}
               >
                 {createApiKeyMutation.isPending ? (
@@ -448,22 +431,27 @@ function ApiKeyModal({
         </div>
       ) : (
         <form
-          onSubmit={form.handleSubmit(onSubmit)}
+          onSubmit={form.handleSubmit((data) => {
+            createApiKeyMutation.mutate(data);
+          })}
           className="space-y-6"
           id="api-key-form"
         >
-          <TextField
-            id="name"
-            label="Name"
-            value={form.watch("name")}
-            onChange={(value) => form.setValue("name", value)}
-            error={form.formState.errors.name?.message}
-            helpText="Give your API key a descriptive name to help you identify it later."
-            placeholder="e.g., Production API Key"
-            required
-            className="shadow-none"
+          <RHF.Controller
+            control={form.control}
+            name="name"
+            render={({ field, fieldState: { error } }) => (
+              <TextField
+                {...field}
+                id="name"
+                label="Name"
+                helpText="Give your API key a descriptive name to help you identify it later."
+                error={error?.message}
+                placeholder="e.g., Production API Key"
+                className="shadow-none"
+              />
+            )}
           />
-  
 
           <div className="bg-muted/50 border-border rounded-lg border p-4">
             <p className="text-muted-foreground text-sm">
