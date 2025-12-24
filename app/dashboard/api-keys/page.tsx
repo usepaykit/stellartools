@@ -34,6 +34,7 @@ import {
 import Link from "next/link";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
+import { useCopy } from "@/hooks/use-copy";
 
 // TODO: Get organizationId and environment from context/session
 // For now using placeholder values - these should be obtained from user session or context
@@ -67,6 +68,8 @@ export default function ApiKeysPage() {
   });
 
   const columns: ColumnDef<ApiKey>[] = [
+  const {  handleCopy } = useCopy();
+    const columns: ColumnDef<ApiKey>[] = [
     {
       accessorKey: "name",
       header: "NAME",
@@ -168,7 +171,7 @@ export default function ApiKeysPage() {
     {
       label: "Copy API key ID",
       onClick: (key) => {
-        navigator.clipboard.writeText(key.id);
+        handleCopy({text: key.id, message: "API key ID copied to clipboard"});
       },
     },
     {
@@ -298,6 +301,7 @@ function ApiKeyModal({
   onApiKeyCreated: (key: string | null) => void;
   queryClient: ReturnType<typeof useQueryClient>;
 }) {
+ const { handleCopy } = useCopy();
   const form = RHF.useForm<ApiKeyFormData>({
     resolver: zodResolver(apiKeySchema),
     defaultValues: {
@@ -305,7 +309,12 @@ function ApiKeyModal({
     },
   });
 
-  // Create API key mutation
+ const handleCopyKey = async () => {
+    if (createdApiKey) {
+      await handleCopy({text: createdApiKey, message: "API key copied to clipboard"});
+    }
+  };
+// Create API key mutation
   const createApiKeyMutation = useMutation({
     mutationFn: async (data: ApiKeyFormData) => {
       return await postApiKey({
@@ -454,6 +463,7 @@ function ApiKeyModal({
             required
             className="shadow-none"
           />
+  
 
           <div className="bg-muted/50 border-border rounded-lg border p-4">
             <p className="text-muted-foreground text-sm">

@@ -29,7 +29,7 @@ import {
   TrendingUp,
   Webhook,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type WebhookDestination = {
   id: string;
@@ -253,6 +253,7 @@ const columns: ColumnDef<WebhookDestination>[] = [
 export default function WebhooksPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Fetch webhooks using React Query
   const {
@@ -287,6 +288,25 @@ export default function WebhooksPage() {
     eventsFrom: "account" as const,
     errorRate: 0,
   }));
+
+  React.useEffect(() => {
+    if (searchParams.get("create") === "true") {
+      setIsModalOpen(true);
+    }
+  }, [searchParams]);
+
+  const handleModalChange = (open: boolean) => {
+    setIsModalOpen(open);
+    const params = new URLSearchParams(searchParams.toString());
+    if (open) {
+      params.set("create", "true");
+    } else {
+      params.delete("create");
+    }
+    router.replace(
+      `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`
+    );
+  };
 
   const tableActions: TableAction<WebhookDestination>[] = [
     {
@@ -329,7 +349,7 @@ export default function WebhooksPage() {
                     services.
                   </p>
                 </div>
-                <Button className="gap-2" onClick={() => setIsModalOpen(true)}>
+                <Button className="gap-2" onClick={() => handleModalChange(true)}>
                   <Plus className="h-4 w-4" />
                   <span className="hidden sm:inline">Add destination</span>
                   <span className="sm:hidden">Add</span>
