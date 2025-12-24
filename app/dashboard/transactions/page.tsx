@@ -28,7 +28,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { nanoid } from "nanoid";
+import moment from "moment";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 import { useCopy } from "@/hooks/use-copy";
@@ -288,12 +288,7 @@ const columns: ColumnDef<Transaction>[] = [
       const date = row.original.date;
       return (
         <div className="text-muted-foreground text-sm">
-          {date.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-          })}
+          {moment(date).format("MMM D, h:mm A")}
         </div>
       );
     },
@@ -305,14 +300,7 @@ const columns: ColumnDef<Transaction>[] = [
       const refundedDate = row.original.refundedDate;
       return (
         <div className="text-muted-foreground text-sm">
-          {refundedDate
-            ? refundedDate.toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-            })
-            : "—"}
+          {refundedDate ? moment(refundedDate).format("MMM D, h:mm A") : "—"}
         </div>
       );
     },
@@ -381,7 +369,8 @@ export function RefundModal({
         receiverPublicKey: data.walletAddress,
         reason: data.reason,
         status: "pending",
-        transactionHash: `pending_${nanoid()}`,
+        // TODO: Get transaction hash from API
+        transactionHash: "",
         metadata: {},
       });
     },
@@ -394,12 +383,12 @@ export function RefundModal({
       });
     },
     onError: (error) => {
+      const errorMessage =
+        error instanceof Error ? error.message : "An unexpected error occurred";
       toast.error("Failed to create refund", {
-        description:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred",
-      } as Parameters<typeof toast.error>[1]);
+        id: "refund-error",
+        description: errorMessage,
+      });
     },
   });
 

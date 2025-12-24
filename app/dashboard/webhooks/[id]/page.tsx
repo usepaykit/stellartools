@@ -315,7 +315,7 @@ export default function WebhookLogPage() {
   const {
     data: webhook,
     isLoading: isLoadingWebhook,
-    error: webhookError,
+    // error: webhookError,
   } = useQuery({
     queryKey: ["webhook", webhookId, ORGANIZATION_ID],
     queryFn: async () => {
@@ -490,35 +490,7 @@ export default function WebhookLogPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>
-                {isLoadingWebhook ? (
-                  <h1 className="text-3xl font-bold tracking-tight">
-                    Loading...
-                  </h1>
-                ) : webhookError ? (
-                  <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-red-600">
-                      Error loading webhook
-                    </h1>
-                    <p className="text-muted-foreground text-sm mt-1">
-                      {webhookError instanceof Error
-                        ? webhookError.message
-                        : "Failed to load webhook"}
-                    </p>
-                  </div>
-                ) : webhook ? (
-                  <div>
-                    <h1 className="text-3xl font-bold tracking-tight">
-                      {webhook.name || "Webhook Logs"}
-                    </h1>
-                    {webhook.description && (
-                      <p className="text-muted-foreground text-sm mt-1">
-                        {webhook.description}
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <h1 className="text-3xl font-bold tracking-tight">Today</h1>
-                )}
+
               </div>
             </div>
 
