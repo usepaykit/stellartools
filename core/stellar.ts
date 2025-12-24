@@ -33,7 +33,7 @@ export class Stellar {
     if (networkPassphrase == StellarSDK.Networks.TESTNET) {
       const keypair = StellarSDK.Keypair.random();
 
-      await fetch(`https://friendbot.stellar.org/?addr=${keypair.publicKey()}`);
+      server.friendbot(keypair.publicKey());
 
       const account = await server.loadAccount(keypair.publicKey());
 
@@ -73,6 +73,13 @@ export class Stellar {
       string
     >
   > {
+    if (!StellarSDK.StrKey.isValidEd25519PublicKey(destinationPublicKey)) {
+      return {
+        data: null,
+        error: "Invalid destination public key",
+      };
+    }
+
     try {
       const { networkPassphrase, server } = this.getServerAndNetwork();
       const sourceKeypair = StellarSDK.Keypair.fromSecret(sourceSecret);
