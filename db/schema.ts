@@ -57,6 +57,7 @@ export const organizations = pgTable("organization", {
     .references(() => accounts.id),
   name: text("name").notNull(),
   description: text("description"),
+  slug: text("slug").notNull(),
   ownerAccountId: text("owner_account_id")
     .notNull()
     .references(() => accounts.id),
