@@ -30,7 +30,7 @@ export class StellarToolsAISDK {
   }
 
   async generateText(...args: Parameters<typeof generateText>) {
-    const checkResult = await this.stellar.credit.check(this.customerId, {
+    const checkResult = await this.stellar.credits.check(this.customerId, {
       productId: this.productId,
       rawAmount: 1,
     });
@@ -49,7 +49,7 @@ export class StellarToolsAISDK {
       ...args[0],
       onStepFinish: async (event) => {
         const tokens = event.usage?.totalTokens || 0;
-        await this.stellar.credit.consume(this.customerId, {
+        await this.stellar.credits.consume(this.customerId, {
           productId: this.productId,
           rawAmount: tokens,
           reason: "generateText",
@@ -61,7 +61,7 @@ export class StellarToolsAISDK {
     });
 
     if (result.usage) {
-      await this.stellar.credit.consume(this.customerId, {
+      await this.stellar.credits.consume(this.customerId, {
         productId: this.productId,
         rawAmount: result.usage.totalTokens ?? 0,
         reason: "generateText",
@@ -73,7 +73,7 @@ export class StellarToolsAISDK {
   }
 
   async streamText(...args: Parameters<typeof streamText>) {
-    const checkResult = await this.stellar.credit.check(this.customerId, {
+    const checkResult = await this.stellar.credits.check(this.customerId, {
       productId: this.productId,
       rawAmount: 1,
     });
@@ -92,7 +92,7 @@ export class StellarToolsAISDK {
       ...args[0],
       onFinish: async (event) => {
         const tokens = event.usage?.totalTokens || 0;
-        await this.stellar.credit.consume(this.customerId, {
+        await this.stellar.credits.consume(this.customerId, {
           productId: this.productId,
           rawAmount: tokens,
           reason: "streamText",
@@ -105,7 +105,7 @@ export class StellarToolsAISDK {
   }
 
   async generateObject(args: Parameters<typeof generateObject>) {
-    const checkResult = await this.stellar.credit.check(this.customerId, {
+    const checkResult = await this.stellar.credits.check(this.customerId, {
       productId: this.productId,
       rawAmount: 1,
     });
@@ -121,7 +121,7 @@ export class StellarToolsAISDK {
     const result = await generateObject({ ...args[0] });
 
     if (result.usage) {
-      await this.stellar.credit.consume(this.customerId, {
+      await this.stellar.credits.consume(this.customerId, {
         productId: this.productId,
         rawAmount: result.usage.totalTokens ?? 0,
         reason: "generateObject",
@@ -133,7 +133,7 @@ export class StellarToolsAISDK {
   }
 
   async streamObject(...args: Parameters<typeof streamObject>) {
-    const checkResult = await this.stellar.credit.check(this.customerId, {
+    const checkResult = await this.stellar.credits.check(this.customerId, {
       productId: this.productId,
       rawAmount: 1,
     });
@@ -152,7 +152,7 @@ export class StellarToolsAISDK {
       ...args[0],
       onFinish: async (event) => {
         const tokens = event.usage?.totalTokens || 0;
-        await this.stellar.credit.consume(this.customerId, {
+        await this.stellar.credits.consume(this.customerId, {
           productId: this.productId,
           rawAmount: tokens,
           reason: "streamObject",

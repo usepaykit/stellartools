@@ -57,7 +57,7 @@ const stellarTools = (options: StellarToolsBetterAuthOptions) => {
 
                 const client = new StellarTools({ apiKey: options.apiKey });
 
-                const existingCustomer = await client.customer.list({
+                const existingCustomer = await client.customers.list({
                   email: user.email,
                 });
 
@@ -76,7 +76,7 @@ const stellarTools = (options: StellarToolsBetterAuthOptions) => {
                 }
 
                 // Create a new customer
-                const newCustomer = await client.customer.create({
+                const newCustomer = await client.customers.create({
                   email: user.email,
                   name: user.name,
                   appMetadata: { source: "betterauth-adapter" },

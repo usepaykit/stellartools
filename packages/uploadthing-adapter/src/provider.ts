@@ -44,7 +44,7 @@ export class StellarToolsUploadThingAdapter {
           files: Array<{ name: string; size: number; type: string }>;
           input: unknown;
         }) => {
-          const product = await this.stellar.product.retrieve(
+          const product = await this.stellar.products.retrieve(
             this.options.productId
           );
           if (!product.ok)
@@ -71,7 +71,7 @@ export class StellarToolsUploadThingAdapter {
             0
           );
 
-          const check = await this.stellar.credit.check(customerId, {
+          const check = await this.stellar.credits.check(customerId, {
             productId: this.options.productId,
             rawAmount,
           });
@@ -83,7 +83,7 @@ export class StellarToolsUploadThingAdapter {
             });
           }
 
-          const result = await this.stellar.credit.consume(customerId, {
+          const result = await this.stellar.credits.consume(customerId, {
             productId: this.options.productId,
             rawAmount,
             reason: "Upload started",
@@ -145,7 +145,7 @@ export class StellarToolsUploadThingAdapter {
               );
             }
 
-            await this.stellar.credit.refund(refundData.customerId, {
+            await this.stellar.credits.refund(refundData.customerId, {
               productId: this.options.productId,
               amount: refundData.requiredCredits,
               reason: "Upload failed: automatic refund",

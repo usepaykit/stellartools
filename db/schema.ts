@@ -1,3 +1,4 @@
+import { WebhookEvent } from "@stellartools/core";
 import { InferSelectModel, sql } from "drizzle-orm";
 import {
   boolean,
@@ -333,23 +334,6 @@ export const payments = pgTable("payment", {
   environment: networkEnum("network").notNull(),
 });
 
-export const featureEnum = pgEnum("feature", ["aisdk", "uploadthing"]);
-
-export const webhookEvent = [
-  "customer.created",
-  "customer.updated",
-  "customer.deleted",
-  "checkout.created",
-  "payment.pending",
-  "payment.confirmed",
-  "payment.failed",
-  "refund.created",
-  "refund.succeeded",
-  "refund.failed",
-] as const;
-
-export type WebhookEvent = (typeof webhookEvent)[number];
-
 export const webhooks = pgTable("webhook", {
   id: text("id").primaryKey(),
   organizationId: text("organization_id")
@@ -357,7 +341,7 @@ export const webhooks = pgTable("webhook", {
     .references(() => organizations.id),
   url: text("url").notNull(),
   secret: text("secret").notNull(),
-  events: text("events").array().notNull(),
+  events: text("events").array().$type<Array<WebhookEvent>>().notNull(),
   name: text("name").notNull(),
   description: text("description"),
   isDisabled: boolean("is_disabled").default(false).notNull(),

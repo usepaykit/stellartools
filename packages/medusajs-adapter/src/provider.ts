@@ -99,7 +99,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
       );
     }
 
-    const checkout = await this.stellar.checkout.create({
+    const checkout = await this.stellar.checkouts.create({
       amount: Number(amount),
       assetCode: currency_code,
       metadata: data?.metadata as Record<string, unknown>,
@@ -168,7 +168,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
       (message) => new MedusaError(MedusaError.Types.INVALID_DATA, message)
     );
 
-    const payment = await this.stellar.payment.retrieve(paymentId, {
+    const payment = await this.stellar.payments.retrieve(paymentId, {
       verifyOnChain: true,
     });
 
@@ -205,7 +205,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
       (message) => new MedusaError(MedusaError.Types.INVALID_DATA, message)
     );
 
-    const refund = await this.stellar.refund.create({
+    const refund = await this.stellar.refunds.create({
       paymentId,
       amount: Number(input.amount),
       reason: (input.data?.reason as string) ?? "Refund for order",
@@ -237,7 +237,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
       (message) => new MedusaError(MedusaError.Types.INVALID_DATA, message)
     );
 
-    const payment = await this.stellar.payment.retrieve(paymentId, {
+    const payment = await this.stellar.payments.retrieve(paymentId, {
       verifyOnChain: true,
     });
 
@@ -303,7 +303,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
         ? (data.metadata as Record<string, unknown>)
         : {};
 
-    const stellarCustomer = await this.stellar.customer.create({
+    const stellarCustomer = await this.stellar.customers.create({
       email: customer?.email,
       name: `${customer?.first_name} ${customer?.last_name}`,
       phone: customer?.phone ?? undefined,
@@ -342,7 +342,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
       );
     }
 
-    const updatedCustomer = await this.stellar.customer.update(
+    const updatedCustomer = await this.stellar.customers.update(
       accountHolderId,
       {
         email: customer.email,
@@ -374,7 +374,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
 
     const accountHolderId = context.account_holder?.data?.id as string;
 
-    const result = await this.stellar.customer.delete(accountHolderId);
+    const result = await this.stellar.customers.delete(accountHolderId);
 
     if (!result.ok) {
       throw new MedusaError(

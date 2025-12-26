@@ -6,19 +6,19 @@ import { PaymentApi } from "./resources/payment";
 import { ProductApi } from "./resources/product";
 import { RefundApi } from "./resources/refund";
 import { SubscriptionApi } from "./resources/subscription";
-import { Webhook } from "./resources/webhook";
+import { WebhookApi } from "./resources/webhooks";
 import { StellarToolsConfig, stellarToolsConfigSchema } from "./schema/shared";
 
 export class StellarTools {
   private config: StellarToolsConfig;
-  public webhook: Webhook;
-  public customer: CustomerApi;
-  public refund: RefundApi;
-  public checkout: CheckoutApi;
-  public payment: PaymentApi;
-  public credit: CreditApi;
-  public product: ProductApi;
-  public subscription: SubscriptionApi;
+  public webhooks: WebhookApi;
+  public customers: CustomerApi;
+  public refunds: RefundApi;
+  public checkouts: CheckoutApi;
+  public payments: PaymentApi;
+  public credits: CreditApi;
+  public products: ProductApi;
+  public subscriptions: SubscriptionApi;
 
   constructor(config: StellarToolsConfig) {
     const { error, data } = stellarToolsConfigSchema.safeParse(config);
@@ -38,20 +38,19 @@ export class StellarTools {
       retryOptions: { max: 3, baseDelay: 1000, debug: false },
     });
 
-    this.webhook = new Webhook();
-
-    this.customer = new CustomerApi(apiClient);
-    this.refund = new RefundApi(apiClient);
-    this.checkout = new CheckoutApi(apiClient);
-    this.payment = new PaymentApi(apiClient);
-    this.credit = new CreditApi(apiClient);
-    this.product = new ProductApi(apiClient);
-    this.subscription = new SubscriptionApi(apiClient);
+    this.customers = new CustomerApi(apiClient);
+    this.refunds = new RefundApi(apiClient);
+    this.checkouts = new CheckoutApi(apiClient);
+    this.payments = new PaymentApi(apiClient);
+    this.credits = new CreditApi(apiClient);
+    this.products = new ProductApi(apiClient);
+    this.subscriptions = new SubscriptionApi(apiClient);
+    this.webhooks = new WebhookApi(apiClient);
   }
 }
 
 export * from "./types";
-export * from "./resources/webhook";
+export { WebhookApi as Webhook } from "./resources/webhooks";
 export { schemaFor, tryCatchAsync, validateRequiredKeys } from "./utils";
 export * from "./schema/customer";
 export * from "./schema/checkout";
@@ -60,3 +59,4 @@ export * from "./schema/refund";
 export * from "./schema/shared";
 export * from "./schema/credits";
 export * from "./schema/subscription";
+export * from "./schema/webhooks";

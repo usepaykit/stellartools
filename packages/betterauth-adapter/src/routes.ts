@@ -24,7 +24,7 @@ export const retrieveOrCreateCustomer = async (
 
   const stellar = new StellarTools({ apiKey: ctx.context.config.apiKey });
 
-  const result = await stellar.customer.create({
+  const result = await stellar.customers.create({
     email: session.user.email,
     name: session.user.name,
     appMetadata: { source: "betterauth-adapter" },
@@ -70,7 +70,7 @@ export const createCustomer = (options: StellarToolsBetterAuthOptions) => {
 
       const stellar = new StellarTools({ apiKey: options.apiKey });
 
-      const result = await stellar.customer.create({
+      const result = await stellar.customers.create({
         email: session.user.email,
         name: session.user.name,
         appMetadata: { source: "betterauth-adapter" },
@@ -116,7 +116,7 @@ export const retrieveCustomer = (options: StellarToolsBetterAuthOptions) => {
       const stellar = new StellarTools({ apiKey: options.apiKey });
       const customerId = session.user.stellarCustomerId as string;
 
-      const result = await stellar.customer.retrieve(customerId);
+      const result = await stellar.customers.retrieve(customerId);
 
       if (!result.ok) {
         throw new APIError("INTERNAL_SERVER_ERROR", {
@@ -162,7 +162,7 @@ export const updateCustomer = (options: StellarToolsBetterAuthOptions) => {
       const phone = ctx.body.phone;
       const appMetadata = ctx.body.appMetadata;
 
-      const result = await stellar.customer.update(customerId, {
+      const result = await stellar.customers.update(customerId, {
         ...(email && { email }),
         ...(name && { name }),
         ...(phone && { phone }),
@@ -205,7 +205,7 @@ export const createSubscription = (options: StellarToolsBetterAuthOptions) => {
       const customerId = await retrieveOrCreateCustomer(ctx);
       const stellar = new StellarTools({ apiKey: options.apiKey });
 
-      const result = await stellar.subscription.create({
+      const result = await stellar.subscriptions.create({
         customerId,
         productId: ctx.body.productId,
         metadata: ctx.body.metadata,
@@ -248,7 +248,7 @@ export const retrieveSubscription = (
 
       const stellar = new StellarTools({ apiKey: options.apiKey });
 
-      const result = await stellar.subscription.retrieve(
+      const result = await stellar.subscriptions.retrieve(
         session.user.stellarCustomerId as string
       );
 
@@ -282,7 +282,7 @@ export const listSubscriptions = (options: StellarToolsBetterAuthOptions) => {
       const stellar = new StellarTools({ apiKey: options.apiKey });
       const customerId = session.user.stellarCustomerId as string;
 
-      const result = await stellar.subscription.list(customerId);
+      const result = await stellar.subscriptions.list(customerId);
 
       if (!result.ok) {
         throw new APIError("INTERNAL_SERVER_ERROR", {
@@ -323,7 +323,7 @@ export const pauseSubscription = (options: StellarToolsBetterAuthOptions) => {
       const stellar = new StellarTools({ apiKey: options.apiKey });
       const subscriptionId = ctx.body.subscriptionId;
 
-      const result = await stellar.subscription.pause(subscriptionId);
+      const result = await stellar.subscriptions.pause(subscriptionId);
 
       if (!result.ok) {
         throw new APIError("INTERNAL_SERVER_ERROR", {
@@ -364,7 +364,7 @@ export const resumeSubscription = (options: StellarToolsBetterAuthOptions) => {
       const stellar = new StellarTools({ apiKey: options.apiKey });
       const subscriptionId = ctx.body.subscriptionId;
 
-      const result = await stellar.subscription.resume(subscriptionId);
+      const result = await stellar.subscriptions.resume(subscriptionId);
 
       if (!result.ok) {
         throw new APIError("INTERNAL_SERVER_ERROR", {
@@ -403,7 +403,7 @@ export const updateSubscription = (options: StellarToolsBetterAuthOptions) => {
       const cancelAtPeriodEnd = ctx.body.cancelAtPeriodEnd;
       const nextBillingDate = ctx.body.nextBillingDate;
 
-      const result = await stellar.subscription.update(subscriptionId, {
+      const result = await stellar.subscriptions.update(subscriptionId, {
         ...(metadata && { metadata }),
         ...(cancelAtPeriodEnd && { cancelAtPeriodEnd }),
         ...(nextBillingDate && { nextBillingDate }),
@@ -447,7 +447,7 @@ export const cancelSubscription = (options: StellarToolsBetterAuthOptions) => {
       const stellar = new StellarTools({ apiKey: options.apiKey });
       const subscriptionId = ctx.body.subscriptionId;
 
-      const result = await stellar.subscription.cancel(subscriptionId);
+      const result = await stellar.subscriptions.cancel(subscriptionId);
 
       if (!result.ok) {
         throw new APIError("INTERNAL_SERVER_ERROR", {
@@ -477,7 +477,7 @@ export const checkCredits = (options: StellarToolsBetterAuthOptions) => {
       const customerId = await retrieveOrCreateCustomer(ctx);
       const stellar = new StellarTools({ apiKey: options.apiKey });
 
-      const result = await stellar.credit.check(customerId, {
+      const result = await stellar.credits.check(customerId, {
         productId: ctx.body.productId,
         rawAmount: ctx.body.rawAmount,
       });
@@ -520,7 +520,7 @@ export const consumeCredits = (options: StellarToolsBetterAuthOptions) => {
       const customerId = await retrieveOrCreateCustomer(ctx);
       const stellar = new StellarTools({ apiKey: options.apiKey });
 
-      const result = await stellar.credit.consume(customerId, {
+      const result = await stellar.credits.consume(customerId, {
         productId: ctx.body.productId,
         rawAmount: ctx.body.rawAmount,
         reason: ctx.body.reason ?? "Consumed",
@@ -570,7 +570,7 @@ export const getTransactions = (options: StellarToolsBetterAuthOptions) => {
       const customerId = await retrieveOrCreateCustomer(ctx);
       const stellar = new StellarTools({ apiKey: options.apiKey });
 
-      const result = await stellar.credit.getTransactions(customerId, {
+      const result = await stellar.credits.getTransactions(customerId, {
         productId: ctx.query.productId,
         limit: ctx.query.limit,
         offset: ctx.query.offset,
@@ -625,7 +625,7 @@ export const createRefund = (options: StellarToolsBetterAuthOptions) => {
       const metadata = ctx.body.metadata;
       const receiverPublicKey = ctx.body.receiverPublicKey;
 
-      const result = await stellar.refund.create({
+      const result = await stellar.refunds.create({
         paymentId,
         amount,
         reason,
