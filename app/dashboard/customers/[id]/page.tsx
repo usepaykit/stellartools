@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 
-import { RefundModal } from "@/app/dashboard/transactions/page";
 import { CustomerModal } from "@/app/dashboard/customers/page";
+import { RefundModal } from "@/app/dashboard/transactions/page";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { Badge } from "@/components/ui/badge";
@@ -245,7 +245,6 @@ const StatusBadge = ({ status }: { status: Payment["status"] }) => {
     </Badge>
   );
 };
-
 
 const CopyButton = ({ text, label }: { text: string; label?: string }) => {
   const { copied, handleCopy } = useCopy();

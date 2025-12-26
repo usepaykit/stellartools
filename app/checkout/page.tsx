@@ -2,13 +2,13 @@
 
 import * as React from "react";
 
+import { FullScreenModal } from "@/components/fullscreen-modal";
 import { TextField } from "@/components/input-picker";
 import { PhoneNumberPicker } from "@/components/phone-number-picker";
-import { FullScreenModal } from "@/components/fullscreen-modal";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { BeautifulQRCode } from "@beautiful-qr-code/react";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -349,7 +349,7 @@ export default function CheckoutPage() {
               disabled={!wallet.available}
               className={cn(
                 "group relative flex w-full items-center justify-between rounded-lg border p-4 transition-all duration-200",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
                 wallet.available
                   ? "border-border bg-card hover:border-primary/50 hover:bg-accent/50 cursor-pointer"
                   : "border-border/50 bg-muted/30 cursor-not-allowed opacity-60"

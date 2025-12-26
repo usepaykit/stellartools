@@ -2,14 +2,20 @@
 
 import * as React from "react";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+} from "@/components/ui/card";
 import { toast } from "@/components/ui/toast";
+import { getInitials } from "@/lib/utils";
 import { Check, Loader2, Mail } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getInitials } from "@/lib/utils";
+
 const mockInvitation = {
   organizationName: "Acme Inc",
   organizationLogo: null,
@@ -19,7 +25,7 @@ const mockInvitation = {
   expiresAt: new Date("2024-12-31"),
 };
 
-export default function JoinTeamPage() {
+function JoinTeamPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -112,8 +118,6 @@ export default function JoinTeamPage() {
   return (
     <div className="bg-background flex min-h-screen flex-col items-center justify-center p-4">
       <div className="flex w-full max-w-md flex-col items-center space-y-6">
-
-
         {/* Invitation Card */}
         <Card className="w-full shadow-none">
           <CardHeader className="space-y-4 text-center">
@@ -129,9 +133,7 @@ export default function JoinTeamPage() {
               </Avatar>
             </div>
             <div className="space-y-2">
-              <h2 className="text-xl">
-                You&apos;ve been invited!
-              </h2>
+              <h2 className="text-xl">You&apos;ve been invited!</h2>
               <CardDescription>
                 <span className="font-semibold">
                   {mockInvitation.inviterName}
@@ -201,3 +203,10 @@ export default function JoinTeamPage() {
   );
 }
 
+export default function JoinTeamPage() {
+  return (
+    <React.Suspense fallback={<div>Loading...</div>}>
+      <JoinTeamPageContent />
+    </React.Suspense>
+  );
+}

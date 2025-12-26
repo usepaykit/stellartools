@@ -8,16 +8,19 @@ import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { TextField } from "@/components/input-picker";
-import { PhoneNumberPicker } from "@/components/phone-number-picker";
+import {
+  PhoneNumberPicker,
+  phoneNumberToString,
+} from "@/components/phone-number-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
-import { Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ColumnDef } from "@tanstack/react-table";
+import { Trash2 } from "lucide-react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as RHF from "react-hook-form";
@@ -261,7 +264,6 @@ export default function CustomersPage() {
       label: "Create invoice",
       onClick: (customer) => {
         console.log("Create invoice for:", customer);
-     
       },
     },
     {
@@ -398,15 +400,18 @@ export function CustomerModal({
   const onSubmit = async (data: CustomerFormData) => {
     try {
       const phoneString = data.phoneNumber.number
-        ? `+${data.phoneNumber.countryCode === "US" ? "1" : ""} ${data.phoneNumber.number}`
+        ? phoneNumberToString(data.phoneNumber)
         : "";
 
-      const metadataRecord = (data.metadata || []).reduce((acc, item) => {
-        if (item.key) {
-          acc[item.key] = item.value || "";
-        }
-        return acc;
-      }, {} as Record<string, string>);
+      const metadataRecord = (data.metadata || []).reduce(
+        (acc, item) => {
+          if (item.key) {
+            acc[item.key] = item.value || "";
+          }
+          return acc;
+        },
+        {} as Record<string, string>
+      );
 
       console.log("Creating customer:", {
         name: data.name,
@@ -414,7 +419,6 @@ export function CustomerModal({
         phone: phoneString || undefined,
         metadata: metadataRecord,
       });
-
 
       toast.success(
         isEditMode
@@ -485,11 +489,14 @@ export function CustomerModal({
         </div>
       }
     >
-      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-8 h-full">
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="flex h-full flex-col gap-8"
+      >
         <div className="flex flex-1 gap-8 overflow-hidden">
           <div className="flex-1 space-y-6 overflow-y-auto">
             <div>
-              <h3 className="text-lg font-semibold mb-2">Basic Information</h3>
+              <h3 className="mb-2 text-lg font-semibold">Basic Information</h3>
               <p className="text-muted-foreground text-sm">
                 Enter the customer&apos;s basic contact information.
               </p>
@@ -551,9 +558,10 @@ export function CustomerModal({
 
           <div className="flex-1 space-y-6 overflow-y-auto">
             <div>
-              <h3 className="text-lg font-semibold mb-2">Metadata</h3>
+              <h3 className="mb-2 text-lg font-semibold">Metadata</h3>
               <p className="text-muted-foreground text-sm">
-                Add custom key-value pairs to store additional information about this customer.
+                Add custom key-value pairs to store additional information about
+                this customer.
               </p>
             </div>
 
@@ -561,20 +569,24 @@ export function CustomerModal({
               <CardContent className="pt-6">
                 <div className="space-y-4">
                   {fields.length === 0 ? (
-                    <div className="text-muted-foreground text-center py-8 text-sm">
-                      No metadata entries. Click &quot;Add metadata&quot; to add one.
+                    <div className="text-muted-foreground py-8 text-center text-sm">
+                      No metadata entries. Click &quot;Add metadata&quot; to add
+                      one.
                     </div>
                   ) : (
                     fields.map((field, index) => (
                       <div
                         key={field.id}
-                        className="flex items-start gap-3 p-4 border rounded-lg"
+                        className="flex items-start gap-3 rounded-lg border p-4"
                       >
-                        <div className="flex-1 grid grid-cols-2 gap-3">
+                        <div className="grid flex-1 grid-cols-2 gap-3">
                           <RHF.Controller
                             control={form.control}
                             name={`metadata.${index}.key`}
-                            render={({ field: fieldProps, fieldState: { error } }) => (
+                            render={({
+                              field: fieldProps,
+                              fieldState: { error },
+                            }) => (
                               <TextField
                                 id={`metadata-key-${index}`}
                                 value={fieldProps.value || ""}
@@ -589,7 +601,10 @@ export function CustomerModal({
                           <RHF.Controller
                             control={form.control}
                             name={`metadata.${index}.value`}
-                            render={({ field: fieldProps, fieldState: { error } }) => (
+                            render={({
+                              field: fieldProps,
+                              fieldState: { error },
+                            }) => (
                               <TextField
                                 id={`metadata-value-${index}`}
                                 value={fieldProps.value || ""}
