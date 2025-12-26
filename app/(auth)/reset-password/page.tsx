@@ -2,6 +2,7 @@
 
 import React from "react";
 
+import { resetPassword } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -14,6 +15,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -35,7 +37,9 @@ type UpdatePasswordFormData = z.infer<typeof updatePasswordSchema>;
 export default function UpdatePassword() {
   const [showNewPassword, setShowNewPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
 
   const form = useForm<UpdatePasswordFormData>({
     resolver: zodResolver(updatePasswordSchema),
@@ -46,26 +50,26 @@ export default function UpdatePassword() {
   });
 
   const onSubmit = async (data: UpdatePasswordFormData) => {
-    setIsSubmitting(true);
-    console.log(data);
+    if (!token) {
+      toast.error("Invalid reset link", {
+        id: "invalid-reset-link",
+        description: "The password reset link is invalid or expired.",
+      });
+      return;
+    }
 
     try {
-      console.log("Password update request:", {
-        timestamp: new Date().toISOString(),
-      });
+      await resetPassword(token, data.newPassword);
       toast.success("Password updated successfully", {
+        id: "password-updated-successfully",
         description: "Your password has been changed successfully.",
-      } as Parameters<typeof toast.success>[1]);
-    } catch (error) {
-      console.error("Password update error:", error);
+      });
+      router.push("/signin");
+    } catch {
       toast.error("Failed to update password", {
-        description:
-          error instanceof Error
-            ? error.message
-            : "Unable to update password. Please try again.",
-      } as Parameters<typeof toast.error>[1]);
-    } finally {
-      setIsSubmitting(false);
+        id: "failed-to-update-password",
+        description: "Unable to update password. Please try again.",
+      });
     }
   };
 
@@ -165,6 +169,12 @@ export default function UpdatePassword() {
             <p className="text-muted-foreground text-sm">
               Choose a new password for your account.
             </p>
+            {!token && (
+              <p className="text-destructive mt-2 text-sm">
+                Invalid or missing reset token. Please request a new password
+                reset link.
+              </p>
+            )}
           </div>
 
           <div className="w-full space-y-2">
@@ -268,9 +278,9 @@ export default function UpdatePassword() {
           <Button
             type="submit"
             className="w-full rounded-md font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg focus:ring-4"
-            disabled={isSubmitting}
+            disabled={form.formState.isSubmitting || !token}
           >
-            {isSubmitting ? (
+            {form.formState.isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Updating password...
@@ -284,7 +294,7 @@ export default function UpdatePassword() {
             <p className="text-muted-foreground text-center text-sm">
               Remember your password?{" "}
               <Link
-                href="/auth/signin"
+                href="/signin"
                 className="hover:text-foreground font-semibold underline transition-colors"
               >
                 Sign in

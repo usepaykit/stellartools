@@ -25,8 +25,8 @@ export const retrieveAccount = async (
         : eq(accounts.email, payload.email as string)
     )
     .limit(1);
-  console.log(account);
-  if (!account) throw new Error("Account not found");
+  console.log("account", account);
+  if (!account) return null;
 
   return account;
 };

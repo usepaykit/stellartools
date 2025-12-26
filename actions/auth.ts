@@ -1,6 +1,6 @@
 "use server";
 
-import { Account, Auth, accounts, auth, db } from "@/db";
+import { Account, Auth, auth, db } from "@/db";
 import {
   clearAuthCookies,
   getAuthCookies,
@@ -83,20 +83,15 @@ export const retrieveAuthByAccountId = async (accountId: string) => {
   return response;
 };
 
-
 export const signUp = async (
   params: Partial<Account> & { password: string }
 ) => {
   if (!params.email) throw new Error("Email is required");
 
   // Check if email already exists
-  try {
-    await retrieveAccount({ email: params.email.toLowerCase() });
+  const existingAccount = await retrieveAccount({ email: params.email.toLowerCase() });
+  if (existingAccount) {
     throw new Error("Email already registered");
-  } catch (error) {
-    if (error instanceof Error && error.message !== "Account not found") {
-      throw error;
-    }
   }
 
   // Hash password
@@ -147,6 +142,11 @@ export const signIn = async (params: { email: string; password: string }) => {
   const account = await retrieveAccount({
     email: params.email.toLowerCase(),
   });
+  console.log("the account found here?---->", account);
+
+  if (!account) {
+    throw new Error("Invalid email or password");
+  }
 
   const authRecord = await retrieveAuthByAccountId(account.id);
 
@@ -210,8 +210,11 @@ export const signOut = async () => {
 
 export const forgotPassword = async (email: string) => {
   try {
-     const account = await retrieveAccount({ email: email.toLowerCase() });
-
+    const account = await retrieveAccount({ email: email.toLowerCase() });
+    console.log("the account found here?---->", account);
+    if (!account) {
+      return { success: true };
+    }
     const resetToken = await createPasswordResetToken(account.id, 1);
 
     const resetLink = `${process.env.APP_URL}/reset-password?token=${resetToken.token}`;
@@ -238,7 +241,9 @@ export const resetPassword = async (token: string, newPassword: string) => {
   }
 
   const account = await retrieveAccount({ id: resetTokenRecord.accountId });
-
+  if (!account) {
+    throw new Error("Account not found");
+  }
   const passwordHash = await bcrypt.hash(newPassword, 10);
 
   const updatedSso = {
@@ -273,7 +278,9 @@ export const updatePassword = async (
   }
 
   const account = user.account;
-
+  if (!account) {
+    throw new Error("Account not found");
+  }
   // Verify current password
   const currentPasswordHash = account.sso?.values?.find(
     (sso) => sso.provider === "local"
@@ -353,9 +360,13 @@ export const handleGoogleOAuth = async (
     const email = payload.email.toLowerCase();
     const googleSub = payload.sub;
 
-    let account: Account;
+    let account: Account | null;
     try {
       account = await retrieveAccount({ email });
+
+      if (!account) {
+        throw new Error("Account not found");
+      }
 
       const hasGoogleSSO = account.sso?.values?.some(
         (sso) => sso.provider === "google" && sso.sub === googleSub
