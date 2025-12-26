@@ -1,9 +1,9 @@
 import crypto from "crypto";
 
-export class Webhook {
+export class WebhooksExternal {
   constructor() {}
 
-  generateSignature = (payload: string, secret: string): string => {
+  generateSignature(payload: string, secret: string): string {
     const timestamp = Math.floor(Date.now() / 1000);
     const signedPayload = `${timestamp}.${payload}`;
 
@@ -13,14 +13,14 @@ export class Webhook {
       .digest("hex");
 
     return `t=${timestamp},v1=${hmac}`;
-  };
+  }
 
-  verifySignature = (
+  verifySignature(
     payload: string,
     signature: string,
     secret: string,
     tolerance: number = 300
-  ): boolean => {
+  ): boolean {
     try {
       const parts = signature.split(",");
       const timestamp = parseInt(parts[0].split("=")[1]);
@@ -44,5 +44,5 @@ export class Webhook {
     } catch {
       return false;
     }
-  };
+  }
 }

@@ -141,7 +141,7 @@ export class CreditApi {
     const [response, deductError] = await tryCatchAsync(
       this.apiClient.post<CreditBalance>(
         `/api/customers/${customerId}/credit/${productId}/transaction`,
-        { body: JSON.stringify({ payload }) }
+        { body: JSON.stringify(payload) }
       )
     );
 

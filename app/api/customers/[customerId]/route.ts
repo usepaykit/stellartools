@@ -11,7 +11,7 @@ import z from "zod";
 
 export const GET = async (
   req: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ customerId: string }> }
 ) => {
   const apiKey = req.headers.get("x-api-key");
 
@@ -19,11 +19,11 @@ export const GET = async (
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { id } = await context.params;
+  const { customerId } = await context.params;
 
   const { organizationId } = await resolveApiKey(apiKey);
 
-  const customer = await retrieveCustomer(id, organizationId);
+  const customer = await retrieveCustomer(customerId, organizationId);
 
   return NextResponse.json({ data: customer });
 };
@@ -38,7 +38,7 @@ const putCustomerSchema = schemaFor<Partial<Customer>>()(
 
 export const PUT = async (
   req: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ customerId: string }> }
 ) => {
   const apiKey = req.headers.get("x-api-key");
 
@@ -46,7 +46,7 @@ export const PUT = async (
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { id } = await context.params;
+  const { customerId } = await context.params;
 
   const { organizationId } = await resolveApiKey(apiKey);
 
@@ -54,14 +54,14 @@ export const PUT = async (
 
   if (error) return NextResponse.json({ error }, { status: 400 });
 
-  const customer = await putCustomer(id, organizationId, data);
+  const customer = await putCustomer(customerId, organizationId, data);
 
   return NextResponse.json({ data: customer });
 };
 
 export const DELETE = async (
   req: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ customerId: string }> }
 ) => {
   const apiKey = req.headers.get("x-api-key");
 
@@ -69,11 +69,11 @@ export const DELETE = async (
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { id } = await context.params;
+  const { customerId } = await context.params;
 
   const { organizationId } = await resolveApiKey(apiKey);
 
-  await deleteCustomer(id, organizationId);
+  await deleteCustomer(customerId, organizationId);
 
   return NextResponse.json({ data: null });
 };

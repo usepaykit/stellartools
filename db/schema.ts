@@ -1,3 +1,4 @@
+import { WebhookEvent } from "@stellartools/core";
 import { InferSelectModel, sql } from "drizzle-orm";
 import {
   boolean,
@@ -27,7 +28,6 @@ export const accounts = pgTable("account", {
     last_name?: string;
     avatar_url?: string;
   }>(),
-  phoneNumber: text("phone_number"),
   sso: jsonb("sso").$type<{
     values: Array<{ provider: AuthProvider; sub: string }>;
   }>(),
@@ -158,6 +158,8 @@ export const assets = pgTable(
   })
 );
 
+export type CustomerMetadata = Record<string, string>;
+
 export const customers = pgTable(
   "customer",
   {
@@ -168,7 +170,7 @@ export const customers = pgTable(
     email: text("email"),
     name: text("name"),
     phone: text("phone"),
-    appMetadata: jsonb("app_metadata").$type<object>().default({}),
+    appMetadata: jsonb("app_metadata").$type<CustomerMetadata>().default({}),
     internalMetadata: jsonb("internal_metadata").$type<object>().default({}),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -203,6 +205,14 @@ export const recurringPeriodEnum = pgEnum("recurring_period", [
 
 export type RecurringPeriod = (typeof recurringPeriodEnum.enumValues)[number];
 
+export const productTypeEnum = pgEnum("product_type", [
+  "subscription",
+  "one_time",
+  "metered",
+]);
+
+export type ProductType = (typeof productTypeEnum.enumValues)[number];
+
 export const products = pgTable("product", {
   id: text("id").primaryKey(),
   organizationId: text("organization_id")
@@ -211,13 +221,11 @@ export const products = pgTable("product", {
   name: text("name").notNull(),
   description: text("description"),
   images: text("images").array(),
-  phoneNumberRequired: boolean("phone_number_required")
-    .default(false)
-    .notNull(),
   status: productStatusEnum("status").notNull(),
   assetId: text("asset_id")
     .notNull()
     .references(() => assets.id),
+  type: productTypeEnum("type").notNull(),
   billingType: billingTypeEnum("billing_type").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -269,6 +277,39 @@ export const checkouts = pgTable(
   })
 );
 
+export const subscriptionStatusEnum = pgEnum("subscription_status", [
+  "active",
+  "past_due",
+  "canceled",
+  "paused",
+]);
+
+export const subscriptions = pgTable("subscription", {
+  id: text("id").primaryKey(),
+  customerId: text("customer_id")
+    .notNull()
+    .references(() => customers.id),
+  productId: text("product_id")
+    .notNull()
+    .references(() => products.id),
+  status: subscriptionStatusEnum("status").notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id),
+  currentPeriodStart: timestamp("current_period_start").notNull(),
+  currentPeriodEnd: timestamp("current_period_end").notNull(),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
+  canceledAt: timestamp("canceled_at"),
+  pausedAt: timestamp("paused_at"),
+  lastPaymentId: text("last_payment_id"),
+  nextBillingDate: timestamp("next_billing_date"),
+  failedPaymentCount: integer("failed_payment_count").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  metadata: jsonb("metadata").$type<object>().default({}),
+  environment: networkEnum("network").notNull(),
+});
+
 export const paymentStatusEnum = pgEnum("payment_status", [
   "pending",
   "confirmed",
@@ -293,23 +334,6 @@ export const payments = pgTable("payment", {
   environment: networkEnum("network").notNull(),
 });
 
-export const featureEnum = pgEnum("feature", ["aisdk", "uploadthing"]);
-
-export const webhookEvent = [
-  "customer.created",
-  "customer.updated",
-  "customer.deleted",
-  "checkout.created",
-  "payment.pending",
-  "payment.confirmed",
-  "payment.failed",
-  "refund.created",
-  "refund.succeeded",
-  "refund.failed",
-] as const;
-
-export type WebhookEvent = (typeof webhookEvent)[number];
-
 export const webhooks = pgTable("webhook", {
   id: text("id").primaryKey(),
   organizationId: text("organization_id")
@@ -317,7 +341,7 @@ export const webhooks = pgTable("webhook", {
     .references(() => organizations.id),
   url: text("url").notNull(),
   secret: text("secret").notNull(),
-  events: text("events").array().notNull(),
+  events: text("events").array().$type<Array<WebhookEvent>>().notNull(),
   name: text("name").notNull(),
   description: text("description"),
   isDisabled: boolean("is_disabled").default(false).notNull(),
@@ -466,4 +490,5 @@ export type TeamInvite = InferSelectModel<typeof teamInvites>;
 export type Refund = InferSelectModel<typeof refunds>;
 export type CreditBalance = InferSelectModel<typeof creditBalances>;
 export type CreditTransaction = InferSelectModel<typeof creditTransactions>;
+export type Subscription = InferSelectModel<typeof subscriptions>;
 export type Auth = InferSelectModel<typeof auth>;
