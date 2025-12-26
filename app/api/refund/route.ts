@@ -50,7 +50,10 @@ export const POST = async (req: NextRequest) => {
 
   if (payment.environment !== environment) {
     return NextResponse.json(
-      { error: "Payment environment does not match organization environment" },
+      {
+        error:
+          "Invalid state, Hint: The payment and organization environments does not match",
+      },
       { status: 400 }
     );
   }
