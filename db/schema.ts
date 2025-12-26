@@ -473,6 +473,30 @@ export const creditTransactions = pgTable(
   })
 );
 
+export const passwordResetTokens = pgTable(
+  "password_reset_token",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    expiresAt: timestamp("expires_at").notNull(),
+    isUsed: boolean("is_used").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    usedAt: timestamp("used_at"),
+  },
+  (table) => ({
+    tokenIndex: index("password_reset_token_idx").on(table.token),
+    accountIdIndex: index("password_reset_token_account_idx").on(
+      table.accountId
+    ),
+    expiresAtIndex: index("password_reset_token_expires_idx").on(
+      table.expiresAt
+    ),
+  })
+);
+
 export type Account = InferSelectModel<typeof accounts>;
 export type Organization = InferSelectModel<typeof organizations>;
 export type TeamMember = InferSelectModel<typeof teamMembers>;
@@ -491,3 +515,4 @@ export type CreditBalance = InferSelectModel<typeof creditBalances>;
 export type CreditTransaction = InferSelectModel<typeof creditTransactions>;
 export type Subscription = InferSelectModel<typeof subscriptions>;
 export type Auth = InferSelectModel<typeof auth>;
+export type PasswordResetToken = InferSelectModel<typeof passwordResetTokens>;

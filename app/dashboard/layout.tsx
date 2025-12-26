@@ -1,11 +1,16 @@
-"use client";
-import { withAuth } from "@/components/with-auth";
+import { getCurrentUser } from "@/actions/auth";
+import { redirect } from "next/navigation";
 
-function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    redirect("/signin");
+  }
+
   return <>{children}</>;
 }
-
-export default withAuth(DashboardLayout, {
-  requireAuth: true,
-  redirectTo: "/signin",
-});

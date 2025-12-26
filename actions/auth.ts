@@ -1,6 +1,6 @@
 "use server";
 
-import { Account, Auth, auth, db } from "@/db";
+import { Account, Auth, accounts, auth, db } from "@/db";
 import {
   clearAuthCookies,
   getAuthCookies,
@@ -13,6 +13,11 @@ import { OAuth2Client } from "google-auth-library";
 import { nanoid } from "nanoid";
 
 import { postAccount, putAccount, retrieveAccount } from "./account";
+import {
+  createPasswordResetToken,
+  markPasswordResetTokenAsUsed,
+  retrievePasswordResetToken,
+} from "./password-reset";
 
 const getGoogleClient = () => {
   const clientId =
@@ -77,6 +82,7 @@ export const retrieveAuthByAccountId = async (accountId: string) => {
 
   return response;
 };
+
 
 export const signUp = async (
   params: Partial<Account> & { password: string }
@@ -202,84 +208,39 @@ export const signOut = async () => {
   await clearAuthCookies();
 };
 
-// Forgot Password - Generate reset token
 export const forgotPassword = async (email: string) => {
   try {
-    const account = await retrieveAccount({ email: email.toLowerCase() });
-    const authRecord = await retrieveAuthByAccountId(account.id);
+     const account = await retrieveAccount({ email: email.toLowerCase() });
 
-    // Generate reset token
-    const resetToken = `reset_${nanoid(32)}`;
-    const resetTokenExpires = new Date();
-    resetTokenExpires.setHours(resetTokenExpires.getHours() + 1); // 1 hour expiry
+    const resetToken = await createPasswordResetToken(account.id, 1);
 
-    // Store reset token in auth metadata
-    const updatedMetadata = {
-      ...((authRecord.metadata as object) || {}),
-      resetToken,
-      resetTokenExpires: resetTokenExpires.toISOString(),
-    };
-
-    await putAuth(authRecord.id, {
-      metadata: updatedMetadata,
-    });
-
-    // TODO: Send email with reset link
-    const resetLink = `${process.env.APP_URL}/auth/reset-password?token=${resetToken}`;
-    await sendEmail(
+    const resetLink = `${process.env.APP_URL}/reset-password?token=${resetToken.token}`;
+    const result = await sendEmail(
       email.toLowerCase(),
       "Reset Password",
       `<a href="${resetLink}">Reset Password</a>`
     );
+    console.log(result);
     return { success: true };
   } catch (error) {
-    // Don't reveal if email exists or not for security
     if (error instanceof Error && error.message === "Account not found") {
-      return { success: true }; // Return success even if account doesn't exist
+      return { success: true };
     }
     throw error;
   }
 };
 
-// Reset Password - Verify token and update password
 export const resetPassword = async (token: string, newPassword: string) => {
-  // Find auth record with matching reset token
-  const authRecords = await db
-    .select()
-    .from(auth)
-    .where(eq(auth.isRevoked, false))
-    .limit(100); // Reasonable limit
+  const resetTokenRecord = await retrievePasswordResetToken(token);
 
-  let authRecord: Auth | null = null;
-  for (const record of authRecords) {
-    const metadata = record.metadata as {
-      resetToken?: string;
-      resetTokenExpires?: string;
-    } | null;
-    if (metadata?.resetToken === token) {
-      // Check if token is expired
-      if (metadata.resetTokenExpires) {
-        const expiresAt = new Date(metadata.resetTokenExpires);
-        if (new Date() > expiresAt) {
-          throw new Error("Reset token has expired");
-        }
-      }
-      authRecord = record;
-      break;
-    }
-  }
-
-  if (!authRecord) {
+  if (!resetTokenRecord) {
     throw new Error("Invalid or expired reset token");
   }
 
-  // Get account
-  const account = await retrieveAccount({ id: authRecord.accountId });
+  const account = await retrieveAccount({ id: resetTokenRecord.accountId });
 
-  // Hash new password
   const passwordHash = await bcrypt.hash(newPassword, 10);
 
-  // Update password in account SSO
   const updatedSso = {
     values: [
       ...(account.sso?.values?.filter((sso) => sso.provider !== "local") || []),
@@ -296,20 +257,7 @@ export const resetPassword = async (token: string, newPassword: string) => {
     },
   });
 
-  // Clear reset token from metadata
-  const updatedMetadata = {
-    ...((authRecord.metadata as object) || {}),
-  };
-  delete (
-    updatedMetadata as { resetToken?: string; resetTokenExpires?: string }
-  ).resetToken;
-  delete (
-    updatedMetadata as { resetToken?: string; resetTokenExpires?: string }
-  ).resetTokenExpires;
-
-  await putAuth(authRecord.id, {
-    metadata: updatedMetadata,
-  });
+  await markPasswordResetTokenAsUsed(resetTokenRecord.id);
 
   return { success: true };
 };

@@ -195,7 +195,7 @@ export default function ForgotPassword() {
             <p className="text-muted-foreground text-center text-sm">
               Remember your password?{" "}
               <Link
-                href="/auth/signin"
+                href="/signin"
                 className="hover:text-foreground font-semibold underline transition-colors"
               >
                 Sign in
