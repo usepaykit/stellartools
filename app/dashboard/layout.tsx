@@ -12,9 +12,5 @@ export default async function DashboardLayout({
     redirect("/signin");
   }
 
-  if (!user.isOnboarded) {
-    redirect("/onboarding");
-  }
-
   return <>{children}</>;
 }

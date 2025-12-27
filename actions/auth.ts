@@ -147,6 +147,7 @@ const generateAndSetSession = async (account: {
 export const accountValidator = async (
   email: string,
   sso: Account["sso"]["values"][number],
+  intent: "SIGN_IN" | "SIGN_UP",
   profile?: Account["profile"],
   sessionMetadata?: Record<string, unknown>
 ) => {
@@ -155,6 +156,12 @@ export const accountValidator = async (
   const isNewUser = !account;
 
   if (!account) {
+    if (intent === "SIGN_IN") {
+      throw new Error(
+        "No account found with this email. Please sign up first."
+      );
+    }
+
     const sub = provider === "local" ? await bcrypt.hash(rawSub, 10) : rawSub;
 
     account = await postAccount({
@@ -162,9 +169,14 @@ export const accountValidator = async (
       userName: email.split("@")[0],
       sso: { values: [{ provider, sub }] },
       profile: profile ?? null,
-      isOnboarded: !!profile,
     });
   } else {
+    if (intent === "SIGN_UP" && provider === "local") {
+      throw new Error(
+        "An account with this email already exists. Please sign in."
+      );
+    }
+
     const existingSso = account.sso?.values?.find(
       (s) => s.provider === provider
     );
@@ -207,6 +219,7 @@ export const accountValidator = async (
     isNewUser,
   };
 };
+
 export const forgotPassword = async (email: string) => {
   const account = await retrieveAccount({ email });
 
@@ -290,7 +303,6 @@ export const getCurrentUser = async () => {
       lastName: account.profile?.lastName || null,
       avatarUrl: account.profile?.avatarUrl || null,
     },
-    isOnboarded: account.isOnboarded,
     createdAt: account.createdAt,
   };
 };

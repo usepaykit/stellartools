@@ -31,15 +31,9 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    let redirect = null;
-
     const [stateData] = tryCatchSync<{ redirect: string; [x: string]: any }>(
       () => JSON.parse(Buffer.from(state ?? "", "base64").toString())
     );
-
-    if (stateData?.redirect) {
-      redirect = decodeURIComponent(stateData.redirect);
-    }
 
     const client = new OAuth2Client(
       process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
@@ -48,8 +42,6 @@ export async function GET(req: NextRequest) {
     );
 
     const { tokens } = await client.getToken(code);
-
-    console.log({ tokens });
 
     if (!tokens.id_token) {
       throw new Error("No ID token received from Google");
@@ -80,10 +72,14 @@ export async function GET(req: NextRequest) {
     await accountValidator(
       payload.email,
       { provider: "google", sub: payload.sub },
-      { firstName, lastName, avatarUrl: payload.picture }
+      "SIGN_IN",
+      { firstName, lastName, avatarUrl: payload.picture },
+      { ...stateData }
     );
 
-    return NextResponse.redirect(new URL(redirect ?? "/dashboard", req.url));
+    return NextResponse.redirect(
+      new URL("/dashboard/select-organization", req.url)
+    );
   } catch (error) {
     console.error("OAuth callback error:", error);
     console.error(

@@ -22,7 +22,6 @@ export type AuthProvider = (typeof authProviderEnum.enumValues)[number];
 export const accounts = pgTable("account", {
   id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
-  userName: text("user_name").notNull(),
   profile: jsonb("profile").$type<{
     firstName?: string;
     lastName?: string;
@@ -35,8 +34,7 @@ export const accounts = pgTable("account", {
     .notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  metadata: jsonb("metadata").$type<object>().default({}),
-  isOnboarded: boolean("is_onboarded").default(false).notNull(),
+  metadata: jsonb("metadata").$type<object>(),
 });
 
 export const auth = pgTable("auth", {
@@ -61,7 +59,6 @@ export const organizations = pgTable("organization", {
     .references(() => accounts.id),
   name: text("name").notNull(),
   description: text("description"),
-  slug: text("slug").notNull(),
   logoUrl: text("logo_url"),
   phoneNumber: text("phone_number"),
   ownerAccountId: text("owner_account_id")

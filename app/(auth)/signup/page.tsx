@@ -49,15 +49,22 @@ export default function SignUp() {
       email: string;
       password: string;
     }) => {
-      return await accountValidator(data.email.toLowerCase(), {
-        provider: "local",
-        sub: data.password,
-      });
+      const [firstName, lastName] = data.name.split(" ");
+
+      return await accountValidator(
+        data.email.toLowerCase(),
+        {
+          provider: "local",
+          sub: data.password,
+        },
+        "SIGN_UP",
+        { firstName, lastName, avatarUrl: undefined },
+        { intent: "SIGN_UP" }
+      );
     },
-    onSuccess: ({ isNewUser }) => {
-      toast.success("Logged in successfully");
-      if (isNewUser) router.push("/onboarding");
-      else router.push("/dashboard");
+    onSuccess: () => {
+      toast.success("Account created successfully");
+      router.push("/dashboard/select-organization");
     },
     onError: (error: Error) => {
       toast.error("Sign-up failed", {

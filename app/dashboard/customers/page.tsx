@@ -444,7 +444,7 @@ export function CustomerModal({
             <div>
               <h3 className="mb-2 text-lg font-semibold">Basic Information</h3>
               <p className="text-muted-foreground text-sm">
-                Enter the customer&apos;s basic contact information.
+                Enter the customer&’s basic contact information.
               </p>
             </div>
 

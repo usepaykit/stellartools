@@ -1,14 +1,22 @@
 "use server";
 
-import { Network, Organization, db, organizations } from "@/db";
-import { and, eq } from "drizzle-orm";
+import { Network, Organization, db, organizations, teamMembers } from "@/db";
+import { and, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
+
+import { postTeamMember } from "./team-member";
 
 export const postOrganization = async (params: Partial<Organization>) => {
   const [organization] = await db
     .insert(organizations)
     .values({ id: `org_${nanoid(25)}`, ...params } as Organization)
     .returning();
+
+  await postTeamMember({
+    organizationId: organization.id,
+    accountId: organization.accountId,
+    role: "owner",
+  });
 
   return organization;
 };
@@ -17,29 +25,34 @@ export const retrieveOrganizations = async (
   accountId: string,
   environment: Network
 ) => {
-  return await db
-    .select()
-    .from(organizations)
+  const orgs = await db
+    .select({
+      id: organizations.id,
+      name: organizations.name,
+      logoUrl: organizations.logoUrl,
+      role: teamMembers.role,
+      memberCount:
+        sql<number>`(SELECT COUNT(*) FROM ${teamMembers} WHERE ${teamMembers.organizationId} = ${organizations.id})`.as(
+          "member_count"
+        ),
+    })
+    .from(teamMembers)
+    .innerJoin(organizations, eq(teamMembers.organizationId, organizations.id))
     .where(
       and(
-        eq(organizations.accountId, accountId),
+        eq(teamMembers.accountId, accountId),
         eq(organizations.environment, environment)
       )
     );
+
+  return orgs;
 };
 
-export const retrieveOrganization = async (
-  params: { id: string } | { slug: string }
-) => {
-  const whereClause =
-    "id" in params
-      ? eq(organizations.id, params.id)
-      : eq(organizations.slug, params.slug as string);
-
+export const retrieveOrganization = async (id: string) => {
   const [organization] = await db
     .select()
     .from(organizations)
-    .where(whereClause)
+    .where(eq(organizations.id, id))
     .limit(1);
 
   if (!organization) throw new Error("Organization not found");

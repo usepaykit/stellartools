@@ -26,10 +26,7 @@ import { z } from "zod";
 
 const signInSchema = z.object({
   email: z.email().toLowerCase(),
-  password: z
-    .string()
-    .min(1, "Password is required")
-    .min(8, "Password must be at least 8 characters"),
+  password: z.string().min(1, "Password is required"),
   rememberMe: z.boolean(),
 });
 
@@ -44,15 +41,20 @@ export default function SignIn() {
 
   const signinMutation = useMutation({
     mutationFn: async (data: { email: string; password: string }) => {
-      return await accountValidator(data.email, {
-        provider: "local",
-        sub: data.password,
-      });
+      return await accountValidator(
+        data.email,
+        {
+          provider: "local",
+          sub: data.password,
+        },
+        "SIGN_IN",
+        undefined,
+        { intent: "SIGN_IN" }
+      );
     },
-    onSuccess: ({ isNewUser }) => {
+    onSuccess: () => {
       toast.success("Logged in successfully");
-      if (isNewUser) router.push("/onboarding");
-      else router.push("/dashboard");
+      router.push("/dashboard/select-organization");
     },
     onError: (error: Error) => {
       toast.error("Sign-in failed", {
@@ -336,7 +338,7 @@ export default function SignIn() {
 
           <div className="w-full text-center">
             <p className="text-muted-foreground text-sm">
-              Don&apos;t have an account?{" "}
+              Don&’t have an account?{" "}
               <Link
                 href="/signup"
                 className="hover:text-foreground font-semibold underline transition-colors"

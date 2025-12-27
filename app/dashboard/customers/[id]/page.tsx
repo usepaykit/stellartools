@@ -252,7 +252,7 @@ export default function CustomerDetailPage() {
               <div className="py-12 text-center">
                 <h1 className="mb-2 text-2xl font-bold">Customer not found</h1>
                 <p className="text-muted-foreground mb-4">
-                  The customer you&apos;re looking for doesn&apos;t exist.
+                  The customer you&’re looking for doesn&’t exist.
                 </p>
                 <Button onClick={() => router.push("/dashboard/customers")}>
                   Back to Customers

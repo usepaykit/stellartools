@@ -30,7 +30,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
 import { Network, RecurringPeriod } from "@/db";
 import { Product as ProductSchema } from "@/db";
@@ -86,8 +85,6 @@ const productSchema = z.object({
       ),
     asset: z.string().min(1, "Asset is required"),
   }),
-  phoneNumberEnabled: z.boolean(),
-
   unit: z.string().optional(),
   unitsPerCredit: z.number().min(1).default(1).optional(),
   unitDivisor: z.number().min(1).optional(),
@@ -400,7 +397,6 @@ function ProductsModal({
       billingCycle: "recurring",
       recurringPeriod: "month",
       price: { amount: "", asset: "XLM" },
-      phoneNumberEnabled: false,
       unitDivisor: 1,
       unitsPerCredit: 1,
       creditsGranted: 0,
@@ -427,7 +423,6 @@ function ProductsModal({
         billingCycle: "recurring",
         recurringPeriod: "month",
         price: { amount: "", asset: "XLM" },
-        phoneNumberEnabled: false,
       });
     }
   }, [open, editingProduct, form]);
@@ -450,7 +445,6 @@ function ProductsModal({
         images,
         billingType: data.billingCycle,
         assetId: data.price.asset,
-        phoneNumberRequired: data.phoneNumberEnabled,
         status: "active" as const,
         organizationId: ORGANIZATION_ID,
         environment: ENVIRONMENT,
@@ -734,34 +728,6 @@ function ProductsModal({
                   />
                 )}
               </div>
-            </div>
-
-            <div className="flex items-center justify-between border-t pt-4">
-              <RHF.Controller
-                control={form.control}
-                name="phoneNumberEnabled"
-                render={({ field }) => (
-                  <div className="flex w-full items-center justify-between space-x-2">
-                    <div className="space-y-0.5">
-                      <Label
-                        htmlFor="phoneNumberEnabled"
-                        className="flex flex-col items-start gap-1"
-                      >
-                        Require phone number
-                        <p className="text-muted-foreground text-xs">
-                          Customers must provide a phone number
-                        </p>
-                      </Label>
-                    </div>
-
-                    <Switch
-                      id="phoneNumberEnabled"
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </div>
-                )}
-              />
             </div>
           </div>
 
