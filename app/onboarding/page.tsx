@@ -471,30 +471,17 @@ function CreateOrganizationContent() {
                   control={teamInviteForm.control}
                   name="emails"
                   render={({ field, fieldState: { error } }) => (
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="team-emails"
-                        className="text-sm font-medium"
-                      >
-                        Team Member Emails
-                      </Label>
-                      <TagInputPicker
-                        value={field.value || []}
-                        onChange={field.onChange}
-                        placeholder="Enter email addresses (press Enter or comma to add)"
-                        className="w-full"
-                      />
-                      {error && (
-                        <p className="text-destructive text-sm" role="alert">
-                          {error.message}
-                        </p>
-                      )}
-                      <p className="text-muted-foreground text-xs">
-                        Invite team members by entering their email addresses.
-                        They will receive an invitation to join your
-                        organization.
-                      </p>
-                    </div>
+                    <TagInputPicker
+                      id="team-emails"
+                      value={field.value || []}
+                      onChange={field.onChange}
+                      placeholder="Enter email addresses (press Enter or comma to add)"
+                      className="w-full"
+                      label="Team Member Emails"
+                      helpText="Press Enter or comma to add multiple emails"
+                      error={error?.message || null}
+                      labelClassName="text-sm font-medium"
+                    />
                   )}
                 />
               </CardContent>

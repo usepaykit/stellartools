@@ -1,8 +1,16 @@
 "use server";
 
-import { Network, Payment, db, payments } from "@/db";
+import {
+  Network,
+  Payment,
+  assets,
+  customers,
+  db,
+  payments,
+  refunds,
+} from "@/db";
 import { Stellar } from "@/integrations/stellar";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export const postPayment = async (params: Partial<Payment>) => {
@@ -16,17 +24,24 @@ export const postPayment = async (params: Partial<Payment>) => {
 
 export const retrievePayments = async (
   organizationId: string,
+  params: {
+    customerId?: string;
+  },
   network: Network
 ) => {
+  const conditions = [
+    eq(payments.organizationId, organizationId),
+    eq(payments.environment, network),
+  ];
+
+  if (params.customerId) {
+    conditions.push(eq(payments.customerId, params.customerId));
+  }
+
   return await db
     .select()
     .from(payments)
-    .where(
-      and(
-        eq(payments.organizationId, organizationId),
-        eq(payments.environment, network)
-      )
-    );
+    .where(and(...conditions));
 };
 
 export const retrievePayment = async (id: string, organizationId: string) => {
@@ -40,6 +55,38 @@ export const retrievePayment = async (id: string, organizationId: string) => {
   if (!payment) throw new Error("Payment not found");
 
   return payment;
+};
+
+export const retrievePaymentsWithDetails = async (
+  organizationId: string,
+  environment: Network
+) => {
+  const result = await db
+    .select({
+      id: payments.id,
+      amount: payments.amount,
+      transactionHash: payments.transactionHash,
+      status: payments.status,
+      createdAt: payments.createdAt,
+      checkoutId: payments.checkoutId,
+      customerEmail: customers.email,
+      assetCode: assets.code,
+      refundStatus: refunds.status,
+      refundedAt: refunds.createdAt,
+    })
+    .from(payments)
+    .leftJoin(customers, eq(payments.customerId, customers.id))
+    .innerJoin(assets, eq(payments.assetId, assets.id))
+    .leftJoin(refunds, eq(payments.id, refunds.paymentId))
+    .where(
+      and(
+        eq(payments.organizationId, organizationId),
+        eq(payments.environment, environment)
+      )
+    )
+    .orderBy(desc(payments.createdAt));
+
+  return result;
 };
 
 export const putPayment = async (
