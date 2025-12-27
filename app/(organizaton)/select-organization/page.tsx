@@ -5,6 +5,7 @@ import * as React from "react";
 import {
   postOrganization,
   retrieveOrganizations,
+  setCurrentOrganization,
 } from "@/actions/organization";
 import {
   FileUploadPicker,
@@ -32,9 +33,6 @@ import type { FileRejection } from "react-dropzone";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 
-const ORGANIZATION_ID = "org_placeholder";
-const ENVIRONMENT = "testnet";
-
 export default function SelectOrganizationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -44,17 +42,15 @@ export default function SelectOrganizationPage() {
   );
 
   const { data: organizations, isLoading } = useQuery({
-    queryKey: ["organizations", ORGANIZATION_ID, ENVIRONMENT],
-    queryFn: () => retrieveOrganizations(ORGANIZATION_ID, ENVIRONMENT),
+    queryKey: ["organizations"],
+    queryFn: () => retrieveOrganizations(),
   });
 
   const hasOrganizations = !!(organizations && organizations.length > 0);
 
   const handleSelectOrg = React.useCallback(
-    (orgId: string) => {
-      if (typeof document !== "undefined") {
-        document.cookie = `selectedOrg=${orgId}; path=/; max-age=31536000`;
-      }
+    async (orgId: string) => {
+      await setCurrentOrganization(orgId);
       router.push("/dashboard");
     },
     [router]
@@ -242,21 +238,23 @@ const CreateOrganizationModal = ({
       const logoUrl = logoFiles[0]?.preview || null;
 
       const org = await postOrganization({
-        accountId: ORGANIZATION_ID,
         name: data.name,
         phoneNumber: data.phoneNumber?.number || null,
         description: data.description || null,
         logoUrl,
-        environment: ENVIRONMENT,
+        settings: null,
+        stellarAccounts: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        metadata: null,
       });
 
-      // Use org ID as the slug (subdomain)
       return org;
     },
-    onSuccess: (org) => {
+    onSuccess: async (org) => {
       toast.success("Organization created successfully");
       // Set the new org as selected
-      document.cookie = `selectedOrg=${org.id}; path=/; max-age=31536000`;
+      await setCurrentOrganization(org.id);
       form.reset();
       setLogoFiles([]);
       onOpenChange(false);

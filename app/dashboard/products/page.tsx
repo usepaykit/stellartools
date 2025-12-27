@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/toast";
-import { Network, RecurringPeriod } from "@/db";
+import { RecurringPeriod } from "@/db";
 import { Product as ProductSchema } from "@/db";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -92,11 +92,6 @@ const productSchema = z.object({
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
-
-// TODO: Get organizationId and environment from context/session
-// For now using placeholder values - these should be obtained from user session or context
-const ORGANIZATION_ID = "org_placeholder";
-const ENVIRONMENT: Network = "testnet";
 
 const SortableHeader = ({
   column,
@@ -215,8 +210,8 @@ function ProductsPageContent() {
   );
 
   const { data: products, isLoading } = useQuery({
-    queryKey: ["products", ORGANIZATION_ID, ENVIRONMENT],
-    queryFn: () => retrieveProductsWithAsset(ORGANIZATION_ID, ENVIRONMENT),
+    queryKey: ["products"],
+    queryFn: () => retrieveProductsWithAsset(),
     select: (productsData) => {
       return productsData.map(({ product, asset }) => {
         return {
@@ -439,24 +434,27 @@ function ProductsModal({
 
       const images: Array<string> = []; // todo: upload images to storage and get the url
 
-      const productData = {
+      const productData: Parameters<typeof postProduct>[0] = {
         name: data.name,
-        description: data.description,
+        description: data.description ?? null,
         images,
         billingType: data.billingCycle,
         assetId: data.price.asset,
         status: "active" as const,
-        organizationId: ORGANIZATION_ID,
-        environment: ENVIRONMENT,
         metadata,
         priceAmount: parseFloat(data.price.amount),
-        recurringPeriod: data.recurringPeriod,
+        recurringPeriod: data.recurringPeriod ?? null,
 
         // Meter
-        unit: data.unit,
-        unitDivisor: data.unitDivisor,
-        unitsPerCredit: data.unitsPerCredit,
-        creditsGranted: data.creditsGranted,
+        unit: data.unit ?? null,
+        unitDivisor: data.unitDivisor ?? null,
+        unitsPerCredit: data.unitsPerCredit ?? null,
+        creditsGranted: data.creditsGranted ?? null,
+        creditExpiryDays: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isArchived: false,
+        type: "one_time", // todo: fix from silas pr.
       };
 
       return await postProduct(productData);
@@ -464,7 +462,7 @@ function ProductsModal({
     onSuccess: () => {
       // Invalidate and refetch products
       queryClient.invalidateQueries({
-        queryKey: ["products", ORGANIZATION_ID, ENVIRONMENT],
+        queryKey: ["products"],
       });
       toast.success(
         isEditMode ? "Product updated successfully!" : "Product created!"

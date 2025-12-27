@@ -57,6 +57,7 @@ export {
   tryCatchSync,
   validateRequiredKeys,
 } from "./utils";
+export type { LooseAutoComplete } from "./types";
 export * from "./schema/customer";
 export * from "./schema/checkout";
 export * from "./schema/payment";

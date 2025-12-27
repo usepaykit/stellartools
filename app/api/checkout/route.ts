@@ -44,7 +44,11 @@ export const POST = async (req: NextRequest) => {
       name: data.customerEmail?.split("@")[0],
       organizationId,
       environment,
-      ...(data.metadata && { appMetadata: data.metadata }),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      phone: null,
+      walletAddresses: null,
+      appMetadata: data?.metadata ?? null,
     });
 
     await tryCatchAsync(

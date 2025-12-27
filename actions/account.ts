@@ -4,6 +4,8 @@ import { Account, AuthProvider, accounts, db } from "@/db";
 import { eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
+import { getCurrentUser } from "./auth";
+
 export const postAccount = async (params: Partial<Account>) => {
   const [account] = await db
     .insert(accounts)
@@ -59,4 +61,16 @@ export const deleteAccount = async (id: string) => {
   await db.delete(accounts).where(eq(accounts.id, id)).returning();
 
   return null;
+};
+
+// -- Account Internal --
+
+export const resolveAccountContext = async (accountId?: string) => {
+  if (accountId) return { accountId };
+
+  const account = await getCurrentUser();
+
+  if (!account) throw new Error("Account not found");
+
+  return { accountId: account.id };
 };

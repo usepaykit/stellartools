@@ -50,9 +50,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
-const ORGANIZATION_ID = "org_placeholder";
-const ENVIRONMENT = "testnet";
-
 const StatusBadge = ({ status }: { status: Payment["status"] }) => {
   const variants = {
     confirmed: {
@@ -177,13 +174,12 @@ export default function CustomerDetailPage() {
 
   const { data: payments, isLoading: isLoadingPayments } = useQuery({
     queryKey: ["payments", customerId],
-    queryFn: () =>
-      retrievePayments(ORGANIZATION_ID, { customerId }, ENVIRONMENT),
+    queryFn: () => retrievePayments(undefined, { customerId }, undefined),
   });
 
   const { data: customer, isLoading: _customerLoading } = useQuery({
     queryKey: ["customer", customerId],
-    queryFn: () => retrieveCustomer(customerId, ORGANIZATION_ID),
+    queryFn: () => retrieveCustomer(customerId),
   });
 
   const handleToggleWalletVisibility = (walletId: string) => {

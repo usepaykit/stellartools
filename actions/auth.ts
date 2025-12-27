@@ -1,13 +1,9 @@
 "use server";
 
 import { Account, Auth, PasswordReset, auth, db, passwordReset } from "@/db";
+import { CookieManager } from "@/integrations/cookie-manager";
 import { JWT } from "@/integrations/jwt";
 import { Resend } from "@/integrations/resend";
-import {
-  clearAuthCookies,
-  getAuthCookies,
-  setAuthCookies,
-} from "@/lib/cookies";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import moment from "moment";
@@ -139,7 +135,10 @@ const generateAndSetSession = async (account: {
   const accessToken = await new JWT().sign(payload, "30m");
   const refreshToken = await new JWT().sign(payload, "30d");
 
-  await setAuthCookies(accessToken, refreshToken);
+  await new CookieManager().set([
+    { key: "accessToken", value: accessToken, maxAge: 30 * 60 },
+    { key: "refreshToken", value: refreshToken, maxAge: 30 * 24 * 60 * 60 },
+  ]);
 
   return { accessToken, refreshToken };
 };
@@ -166,7 +165,6 @@ export const accountValidator = async (
 
     account = await postAccount({
       email,
-      userName: email.split("@")[0],
       sso: { values: [{ provider, sub }] },
       profile: profile ?? null,
     });
@@ -269,7 +267,7 @@ export const resetPassword = async (token: string, newPassword: string) => {
 };
 
 export const getCurrentUser = async () => {
-  const { accessToken } = await getAuthCookies();
+  const accessToken = await new CookieManager().get("accessToken");
 
   if (!accessToken) return null;
 
@@ -283,21 +281,26 @@ export const getCurrentUser = async () => {
   const authRecord = await retrieveAuth({ accountId: payload.accountId });
 
   if (authRecord.isRevoked || new Date() > authRecord.expiresAt) {
-    await clearAuthCookies();
+    await new CookieManager().delete([
+      { key: "accessToken" },
+      { key: "refreshToken" },
+    ]);
     return null;
   }
 
   const account = await retrieveAccount({ id: payload.accountId });
 
   if (!account) {
-    await clearAuthCookies();
+    await new CookieManager().delete([
+      { key: "accessToken" },
+      { key: "refreshToken" },
+    ]);
     return null;
   }
 
   return {
     id: account.id,
     email: account.email,
-    userName: account.userName,
     profile: {
       firstName: account.profile?.firstName || null,
       lastName: account.profile?.lastName || null,

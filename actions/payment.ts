@@ -13,6 +13,8 @@ import { Stellar } from "@/integrations/stellar";
 import { and, desc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
+import { resolveOrgContext } from "./organization";
+
 export const postPayment = async (params: Partial<Payment>) => {
   const [payment] = await db
     .insert(payments)
@@ -23,18 +25,18 @@ export const postPayment = async (params: Partial<Payment>) => {
 };
 
 export const retrievePayments = async (
-  organizationId: string,
-  params: {
-    customerId?: string;
-  },
-  network: Network
+  orgId?: string,
+  params?: { customerId?: string },
+  env?: Network
 ) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const conditions = [
     eq(payments.organizationId, organizationId),
-    eq(payments.environment, network),
+    eq(payments.environment, environment),
   ];
 
-  if (params.customerId) {
+  if (params?.customerId) {
     conditions.push(eq(payments.customerId, params.customerId));
   }
 
@@ -44,12 +46,22 @@ export const retrievePayments = async (
     .where(and(...conditions));
 };
 
-export const retrievePayment = async (id: string, organizationId: string) => {
+export const retrievePayment = async (
+  id: string,
+  orgId?: string,
+  env?: Network
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const [payment] = await db
     .select()
     .from(payments)
     .where(
-      and(eq(payments.id, id), eq(payments.organizationId, organizationId))
+      and(
+        eq(payments.id, id),
+        eq(payments.organizationId, organizationId),
+        eq(payments.environment, environment)
+      )
     );
 
   if (!payment) throw new Error("Payment not found");
@@ -58,9 +70,11 @@ export const retrievePayment = async (id: string, organizationId: string) => {
 };
 
 export const retrievePaymentsWithDetails = async (
-  organizationId: string,
-  environment: Network
+  orgId?: string,
+  env?: Network
 ) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const result = await db
     .select({
       id: payments.id,

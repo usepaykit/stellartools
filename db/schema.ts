@@ -61,14 +61,10 @@ export const organizations = pgTable("organization", {
   description: text("description"),
   logoUrl: text("logo_url"),
   phoneNumber: text("phone_number"),
-  ownerAccountId: text("owner_account_id")
-    .notNull()
-    .references(() => accounts.id),
-  settings: jsonb("settings").$type<object>().notNull(),
+  settings: jsonb("settings").$type<object | null>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  metadata: jsonb("metadata").$type<object>().default({}),
-  environment: networkEnum("network").notNull(),
+  metadata: jsonb("metadata").$type<object | null>(),
   stellarAccounts: jsonb("stellar_account").$type<{
     [K in (typeof networkEnum.enumValues)[number]]: {
       public_key: string;
@@ -368,13 +364,17 @@ export const webhookLogs = pgTable("webhook_log", {
     .notNull()
     .references(() => organizations.id),
   eventType: text("event_type").notNull(),
-  payload: jsonb("payload").$type<object>().notNull(),
+  request: jsonb("request").$type<object>().notNull(),
   statusCode: integer("status_code"),
   errorMessage: text("error_message"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   responseTime: integer("response_time"), // in milliseconds
+  response: jsonb("response").$type<object | null>(),
+  apiVersion: text("api_version").notNull(),
   environment: networkEnum("network").notNull(),
+  nextRetry: timestamp("next_retry"),
+  description: text("description").notNull(),
 });
 
 export const refundStatusEnum = pgEnum("refund_status", [

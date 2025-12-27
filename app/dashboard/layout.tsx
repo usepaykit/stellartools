@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/actions/auth";
+import { getCurrentOrganization } from "@/actions/organization";
 import { redirect } from "next/navigation";
 
 export default async function DashboardLayout({
@@ -8,9 +9,11 @@ export default async function DashboardLayout({
 }) {
   const user = await getCurrentUser();
 
-  if (!user) {
-    redirect("/signin");
-  }
+  if (!user) redirect("/auth/signin");
+
+  const currentOrg = await getCurrentOrganization();
+
+  if (!currentOrg) redirect("/select-organization");
 
   return <>{children}</>;
 }

@@ -19,12 +19,16 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 
 import { putCheckout } from "./checkout";
+import { resolveOrgContext } from "./organization";
 import { postPayment } from "./payment";
 
 export const postWebhook = async (
-  organizationId: string,
-  data: Partial<Webhook>
+  orgId?: string,
+  env?: Network,
+  data?: Omit<Webhook, "id" | "organizationId" | "environment">
 ) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const [webhook] = await db
     .insert(webhooks)
     .values({
@@ -32,6 +36,7 @@ export const postWebhook = async (
       id: `wh_${nanoid(25)}`,
       isDisabled: false,
       organizationId,
+      environment,
     } as Webhook)
     .returning();
 
@@ -60,9 +65,11 @@ export const retrieveWebhooks = async (
 };
 
 export const getWebhooksWithAnalytics = async (
-  organizationId: string,
-  environment: Network
+  orgId?: string,
+  env?: Network
 ) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const result = await db
     .select({
       id: webhooks.id,
@@ -168,15 +175,19 @@ export const postWebhookLog = async (
 
 export const retrieveWebhookLogs = async (
   webhookId: string,
-  organizationId: string
+  orgId?: string,
+  env?: Network
 ) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const webhookLogsResult = await db
     .select()
     .from(webhookLogs)
     .where(
       and(
         eq(webhookLogs.webhookId, webhookId),
-        eq(webhookLogs.organizationId, organizationId)
+        eq(webhookLogs.organizationId, organizationId),
+        eq(webhookLogs.environment, environment)
       )
     );
 

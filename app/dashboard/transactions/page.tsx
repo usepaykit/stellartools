@@ -36,9 +36,6 @@ import { useSearchParams } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 
-const ORGANIZATION_ID = "org_placeholder";
-const ENVIRONMENT = "testnet";
-
 // --- Types ---
 
 type TransactionStatus = "succeeded" | "refunded" | "failed";
@@ -252,7 +249,7 @@ export function RefundModal({
 
   const createRefundMutation = useMutation({
     mutationFn: async (data: RefundFormData) => {
-      const payment = await retrievePayment(data.paymentId, ORGANIZATION_ID);
+      const payment = await retrievePayment(data.paymentId);
 
       return await postRefund({
         paymentId: payment.id,
@@ -275,7 +272,7 @@ export function RefundModal({
       form.reset();
       onOpenChange(false);
       queryClient.invalidateQueries({
-        queryKey: ["refunds", ORGANIZATION_ID],
+        queryKey: ["refunds"],
       });
     },
     onError: (error) => {
@@ -389,8 +386,8 @@ function TransactionsPageContent() {
   >(null);
 
   const { data: payments, isLoading } = useQuery({
-    queryKey: ["payments", ORGANIZATION_ID, ENVIRONMENT],
-    queryFn: () => retrievePaymentsWithDetails(ORGANIZATION_ID, ENVIRONMENT),
+    queryKey: ["payments"],
+    queryFn: () => retrievePaymentsWithDetails(),
   });
 
   const stats = React.useMemo(() => {

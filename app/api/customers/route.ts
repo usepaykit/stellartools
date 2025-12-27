@@ -33,6 +33,9 @@ export const POST = async (req: NextRequest) => {
     ...data,
     organizationId,
     environment,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    walletAddresses: null,
   });
 
   await tryCatchAsync(
