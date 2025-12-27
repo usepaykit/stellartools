@@ -22,9 +22,13 @@ export const GET = async (
 
   const { customerId } = await context.params;
 
-  const { organizationId } = await resolveApiKey(apiKey);
+  const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  const customer = await retrieveCustomer(customerId, organizationId);
+  const customer = await retrieveCustomer(
+    customerId,
+    organizationId,
+    environment
+  );
 
   return NextResponse.json({ data: customer });
 };
@@ -49,16 +53,26 @@ export const PUT = async (
 
   const { customerId } = await context.params;
 
-  const { organizationId } = await resolveApiKey(apiKey);
+  const { organizationId, environment } = await resolveApiKey(apiKey);
 
   const { error, data } = putCustomerSchema.safeParse(await req.json());
 
   if (error) return NextResponse.json({ error }, { status: 400 });
 
-  const customer = await putCustomer(customerId, organizationId, data);
+  const customer = await putCustomer(
+    customerId,
+    data,
+    organizationId,
+    environment
+  );
 
   await tryCatchAsync(
-    triggerWebhooks(organizationId, "customer.updated", { customer })
+    triggerWebhooks(
+      "customer.updated",
+      { customer },
+      organizationId,
+      environment
+    )
   );
 
   return NextResponse.json({ data: customer });
@@ -76,15 +90,17 @@ export const DELETE = async (
 
   const { customerId } = await context.params;
 
-  const { organizationId } = await resolveApiKey(apiKey);
+  const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  await deleteCustomer(customerId, organizationId);
+  await deleteCustomer(customerId, organizationId, environment);
 
   await tryCatchAsync(
-    triggerWebhooks(organizationId, "customer.deleted", {
-      customerId,
-      deleted: true,
-    })
+    triggerWebhooks(
+      "customer.deleted",
+      { customerId, deleted: true },
+      organizationId,
+      environment
+    )
   );
 
   return NextResponse.json({ data: null });

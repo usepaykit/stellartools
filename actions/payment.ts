@@ -15,10 +15,21 @@ import { nanoid } from "nanoid";
 
 import { resolveOrgContext } from "./organization";
 
-export const postPayment = async (params: Partial<Payment>) => {
+export const postPayment = async (
+  orgId?: string,
+  env?: Network,
+  params?: Omit<Payment, "id" | "organizationId" | "environment">
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const [payment] = await db
     .insert(payments)
-    .values({ id: `pay_${nanoid(25)}`, ...params } as Payment)
+    .values({
+      ...(params as Payment),
+      id: `pay_${nanoid(25)}`,
+      organizationId,
+      environment,
+    })
     .returning();
 
   return payment;

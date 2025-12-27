@@ -265,6 +265,7 @@ export const checkouts = pgTable(
     customerId: text("customer_id").references(() => customers.id),
     productId: text("product_id").references(() => products.id),
     amount: integer("amount"),
+    assetId: text("asset_id").references(() => assets.id),
     description: text("description"),
     status: checkoutStatusEnum("status").notNull(),
     paymentUrl: text("payment_url").notNull(),

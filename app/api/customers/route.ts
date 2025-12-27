@@ -39,7 +39,12 @@ export const POST = async (req: NextRequest) => {
   });
 
   await tryCatchAsync(
-    triggerWebhooks(organizationId, "customer.created", { customer })
+    triggerWebhooks(
+      "customer.created",
+      { customer },
+      organizationId,
+      environment
+    )
   );
 
   return NextResponse.json({ data: customer });

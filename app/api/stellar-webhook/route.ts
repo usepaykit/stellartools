@@ -8,14 +8,15 @@ export const dynamic = "force-dynamic";
 
 const postWebhookSchema = z.object({
   apiKey: z.string(),
+  checkoutId: z.string(),
 });
 
 export const POST = async (req: NextRequest) => {
-  const { apiKey } = postWebhookSchema.parse(await req.json());
+  const { apiKey, checkoutId } = postWebhookSchema.parse(await req.json());
 
   const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  const organization = await retrieveOrganization({ id: organizationId });
+  const organization = await retrieveOrganization(organizationId);
 
   const stellarAccount = organization?.stellarAccounts?.[environment];
 
@@ -25,7 +26,12 @@ export const POST = async (req: NextRequest) => {
       { status: 404 }
     );
   }
-  await processStellarWebhook(environment, stellarAccount, organization);
+  await processStellarWebhook(
+    environment,
+    stellarAccount,
+    organization,
+    checkoutId
+  );
 
   return NextResponse.json({ message: "Webhook received" });
 };

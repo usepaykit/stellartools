@@ -52,7 +52,13 @@ export const POST = async (req: NextRequest) => {
     });
 
     await tryCatchAsync(
-      triggerWebhooks(organizationId, "customer.created", { customer })
+      triggerWebhooks(
+        "customer.created",
+        { customer },
+        organizationId,
+        environment
+        
+      )
     );
   } else {
     throw new Error("Customer ID or email is required");
@@ -68,7 +74,12 @@ export const POST = async (req: NextRequest) => {
   });
 
   await tryCatchAsync(
-    triggerWebhooks(organizationId, "checkout.created", { checkout })
+    triggerWebhooks(
+      "checkout.created",
+      { checkout },
+      organizationId,
+      environment
+    )
   );
 
   return NextResponse.json({ data: checkout });

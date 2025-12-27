@@ -87,10 +87,22 @@ export const putApiKey = async (
   return apiKey;
 };
 
-export const deleteApiKey = async (id: string, organizationId: string) => {
+export const deleteApiKey = async (
+  id: string,
+  orgId?: string,
+  env?: Network
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   await db
     .delete(apiKeys)
-    .where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId)))
+    .where(
+      and(
+        eq(apiKeys.id, id),
+        eq(apiKeys.organizationId, organizationId),
+        eq(apiKeys.environment, environment)
+      )
+    )
     .returning();
 
   return null;
