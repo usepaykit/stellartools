@@ -166,6 +166,11 @@ export const assets = pgTable(
 
 export type CustomerMetadata = Record<string, string>;
 
+export type CustomerWalletAddress = {
+  address: string;
+  memo?: string;
+};
+
 export const customers = pgTable(
   "customer",
   {
@@ -180,6 +185,7 @@ export const customers = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     environment: networkEnum("network").notNull(),
+    walletAddresses: jsonb("wallet_addresses").$type<CustomerWalletAddress[]>(),
   },
   (table) => ({
     uniqueOrgEmail: unique().on(table.organizationId, table.email),
@@ -238,6 +244,7 @@ export const products = pgTable("product", {
   environment: networkEnum("network").notNull(),
   priceAmount: integer("price_amount").notNull(),
   recurringPeriod: recurringPeriodEnum("recurring_period"),
+  isArchived: boolean("is_archived").default(false).notNull(),
 
   // Metered billing
   unit: text("unit"), // e.g., "tokens", "MB", "requests", "images", "minutes"
