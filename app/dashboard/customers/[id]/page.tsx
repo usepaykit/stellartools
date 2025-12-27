@@ -815,7 +815,8 @@ export default function CustomerDetailPage() {
                       <span className="sr-only">Edit metadata</span>
                     </Button>
                   </div>
-                  {customer.metadata && Object.keys(customer.metadata).length > 0 ? (
+                  {customer.metadata &&
+                  Object.keys(customer.metadata).length > 0 ? (
                     <div
                       className="border-muted-foreground/20 hover:border-muted-foreground/30 cursor-pointer rounded-lg border-2 border-dashed p-4 transition-colors"
                       onClick={() => setIsMetadataModalOpen(true)}
@@ -824,7 +825,9 @@ export default function CustomerDetailPage() {
                         <div>
                           <div className="text-sm font-medium">
                             {Object.keys(customer.metadata).length} metadata
-                            {Object.keys(customer.metadata).length !== 1 ? " fields" : " field"}
+                            {Object.keys(customer.metadata).length !== 1
+                              ? " fields"
+                              : " field"}
                           </div>
                           <p className="text-muted-foreground/70 mt-1 text-xs">
                             Click to view and edit metadata
@@ -891,58 +894,60 @@ export default function CustomerDetailPage() {
   );
 }
 
-// Metadata Modal Component
-function MetadataModal({
-  open,
-  onOpenChange,
-  metadata,
-  customerName,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  metadata: Record<string, string>;
-  customerName: string;
-}) {
-  const metadataJson = React.useMemo(() => {
-    return JSON.stringify(metadata, null, 2);
-  }, [metadata]);
+const MetadataModal = React.memo(
+  ({
+    open,
+    onOpenChange,
+    metadata,
+    customerName,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    metadata: Record<string, string>;
+    customerName: string;
+  }) => {
+    const metadataJson = React.useMemo(() => {
+      return JSON.stringify(metadata, null, 2);
+    }, [metadata]);
 
-  return (
-    <FullScreenModal
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Customer Metadata"
-      description={`Metadata for ${customerName}`}
-      size="full"
-      showCloseButton={true}
-      footer={
-        <div className="flex justify-end gap-3">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="shadow-none"
+    return (
+      <FullScreenModal
+        open={open}
+        onOpenChange={onOpenChange}
+        title="Customer Metadata"
+        description={`Metadata for ${customerName}`}
+        size="full"
+        showCloseButton={true}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="shadow-none"
+            >
+              Close
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <p className="text-muted-foreground text-sm">
+              View and manage custom metadata associated with this customer.
+            </p>
+          </div>
+          <CodeBlock
+            language="json"
+            filename="metadata.json"
+            showCopyButton={true}
+            maxHeight="none"
+            className="w-full"
           >
-            Close
-          </Button>
+            {metadataJson || "{}"}
+          </CodeBlock>
         </div>
-      }
-    >
-      <div className="space-y-4">
-        <div>
-          <p className="text-muted-foreground text-sm">
-            View and manage custom metadata associated with this customer.
-          </p>
-        </div>
-        <CodeBlock
-          language="json"
-          filename="metadata.json"
-          showCopyButton={true}
-          maxHeight="none"
-          className="w-full"
-        >
-          {metadataJson || "{}"}
-        </CodeBlock>
-      </div>
-    </FullScreenModal>
-  );
-}
+      </FullScreenModal>
+    );
+  }
+);
+MetadataModal.displayName = "MetadataModal";
