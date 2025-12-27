@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { FileRejection } from "react-dropzone";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
@@ -91,6 +91,28 @@ const organizationSchema = z.object({
 
 type OrganizationFormData = z.infer<typeof organizationSchema>;
 
+const profileSchema = z.object({
+  firstName: z
+    .string()
+    .min(1, "First name is required")
+    .min(2, "First name must be at least 2 characters")
+    .max(50, "First name must be less than 50 characters")
+    .trim(),
+  lastName: z
+    .string()
+    .min(1, "Last name is required")
+    .min(2, "Last name must be at least 2 characters")
+    .max(50, "Last name must be less than 50 characters")
+    .trim(),
+  profilePicture: z
+    .array(z.any())
+    .max(1, "Only one profile picture can be uploaded")
+    .default([])
+    .optional(),
+});
+
+type ProfileFormData = z.infer<typeof profileSchema>;
+
 const teamInviteSchema = z.object({
   emails: z
     .array(z.string().email("Please enter a valid email address"))
@@ -99,10 +121,16 @@ const teamInviteSchema = z.object({
     .optional(),
 });
 
-export default function CreateOrganization() {
+function CreateOrganizationContent() {
   const router = useRouter();
-  const [step, setStep] = React.useState<"organization" | "team">(
-    "organization"
+  const searchParams = useSearchParams();
+  const stepParam = searchParams.get("step");
+
+  // Check if profile step should be shown (only for email/password signups)
+  const shouldShowProfile = stepParam === "profile";
+
+  const [step, setStep] = React.useState<"profile" | "organization" | "team">(
+    shouldShowProfile ? "profile" : "organization"
   );
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [createdOrganization, setCreatedOrganization] =
@@ -152,12 +180,59 @@ export default function CreateOrganization() {
     }
   };
 
+  const profileForm = RHF.useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      profilePicture: [],
+    },
+  });
+
+  const handleProfilePictureChange = (files: FileWithPreview[]) => {
+    profileForm.setValue("profilePicture", files);
+  };
+
+  const handleProfilePictureRejected = (rejections: FileRejection[]) => {
+    const firstError = rejections[0]?.errors[0];
+    if (firstError) {
+      toast.error(firstError.message || "Failed to upload profile picture");
+    }
+  };
+
   const teamInviteForm = RHF.useForm({
     resolver: zodResolver(teamInviteSchema),
     defaultValues: {
       emails: [] as string[],
     },
   });
+
+  const onProfileSubmit = async (data: ProfileFormData) => {
+    setIsSubmitting(true);
+
+    try {
+      console.log("Saving profile:", {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        profilePicture: data.profilePicture?.[0]?.name,
+      });
+
+      toast.success("Profile saved successfully!", {
+        description: "Now let's set up your organization",
+      } as Parameters<typeof toast.success>[1]);
+
+      // Navigate to organization step
+      router.push("/onboarding");
+      setStep("organization");
+      setIsSubmitting(false);
+    } catch (error) {
+      console.error("Failed to save profile:", error);
+      toast.error("Failed to save profile", {
+        description: "Please try again later",
+      } as Parameters<typeof toast.error>[1]);
+      setIsSubmitting(false);
+    }
+  };
 
   const onSubmit = async (data: OrganizationFormData) => {
     setIsSubmitting(true);
@@ -220,6 +295,146 @@ export default function CreateOrganization() {
   const handleSkipTeamInvite = () => {
     router.push(`/onboarding/${createdOrganization?.slug}`);
   };
+
+  if (step === "profile") {
+    return (
+      <div className="bg-background flex min-h-screen flex-col items-center justify-center p-4">
+        <div className="flex w-full max-w-2xl flex-col items-center">
+          <div className="mb-8 transition-opacity duration-300">
+            <Image
+              src="/images/logo-light.png"
+              alt="Stellar Tools logo"
+              width={80}
+              height={80}
+              className="rounded-md object-contain"
+              priority
+            />
+          </div>
+
+          <div className="mb-8 text-center">
+            <h1 className="text-foreground mb-2 text-3xl font-semibold tracking-tight">
+              Complete your profile
+            </h1>
+            <p className="text-muted-foreground text-lg">
+              Let&apos;s start with some basic information about you
+            </p>
+          </div>
+
+          <form
+            onSubmit={profileForm.handleSubmit(onProfileSubmit)}
+            className="w-full space-y-6"
+            noValidate
+          >
+            <Card className="border-none shadow-none">
+              <CardContent className="space-y-5 pt-1">
+                <div className="pb-6">
+                  <RHF.Controller
+                    control={profileForm.control}
+                    name="profilePicture"
+                    render={({ field, fieldState: { error } }) => (
+                      <div className="mb-15 space-y-2">
+                        <Label className="text-sm font-medium">
+                          Profile Picture
+                        </Label>
+                        <FileUploadPicker
+                          id="profile-picture"
+                          value={field.value || []}
+                          onFilesChange={(files) => {
+                            field.onChange(files);
+                            handleProfilePictureChange(files);
+                          }}
+                          onFilesRejected={handleProfilePictureRejected}
+                          label="Drag & drop your profile picture here, or click to select"
+                          description="PNG, JPG up to 5MB"
+                          disabled={isSubmitting}
+                          dropzoneAccept={{
+                            "image/*": [
+                              ".png",
+                              ".jpg",
+                              ".jpeg",
+                              ".gif",
+                              ".webp",
+                            ],
+                          }}
+                          dropzoneMaxSize={5 * 1024 * 1024}
+                          dropzoneMultiple={false}
+                          className="h-40"
+                        />
+                        {error && (
+                          <p className="text-destructive text-sm" role="alert">
+                            {error.message}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  />
+                </div>
+
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <RHF.Controller
+                    control={profileForm.control}
+                    name="firstName"
+                    render={({ field, fieldState: { error } }) => (
+                      <TextField
+                        id="first-name"
+                        label="First Name"
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="John"
+                        error={error?.message || null}
+                        labelClassName="text-sm font-medium"
+                        required
+                        className="w-full shadow-none"
+                        disabled={isSubmitting}
+                      />
+                    )}
+                  />
+
+                  <RHF.Controller
+                    control={profileForm.control}
+                    name="lastName"
+                    render={({ field, fieldState: { error } }) => (
+                      <TextField
+                        id="last-name"
+                        label="Last Name"
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Doe"
+                        error={error?.message || null}
+                        labelClassName="text-sm font-medium"
+                        required
+                        className="w-full shadow-none"
+                        disabled={isSubmitting}
+                      />
+                    )}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Button
+              type="submit"
+              className="w-full"
+              size="lg"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  Continue
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   if (step === "team") {
     return (
@@ -661,5 +876,13 @@ export default function CreateOrganization() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function CreateOrganization() {
+  return (
+    <React.Suspense fallback={<div>Loading...</div>}>
+      <CreateOrganizationContent />
+    </React.Suspense>
   );
 }
