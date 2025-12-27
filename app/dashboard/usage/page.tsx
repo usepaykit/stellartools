@@ -19,7 +19,7 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { ColumnDef } from "@tanstack/react-table";
-import { ChevronRight, Package, Search } from "lucide-react";
+import { Activity, ChevronRight, Package, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -307,7 +307,7 @@ export default function UsagePage() {
 
             {/* Search */}
             <div className="max-w-md">
-              <InputGroup>
+              <InputGroup className="shadow-none">
                 <InputGroupAddon align="inline-start">
                   <Search className="h-4 w-4" />
                 </InputGroupAddon>
@@ -316,20 +316,53 @@ export default function UsagePage() {
                   placeholder="Search by customer, email, product, or ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  className="shadow-none"
                 />
               </InputGroup>
             </div>
 
-            {/* Table */}
-            <DataTable
-              columns={columns}
-              data={filteredRecords}
-              actions={tableActions}
-              onRowClick={(row) => {
-                // Navigate to customer page
-                router.push(`/dashboard/usage/${row.id}`);
-              }}
-            />
+            {/* Table or Empty State */}
+            {filteredRecords.length !== 0 ? (
+              <div className="border-border/50 flex min-h-[400px] flex-col items-center justify-center rounded-lg border p-12">
+                <div className="flex flex-col items-center gap-4 text-center">
+                  <div className="bg-muted flex h-16 w-16 items-center justify-center rounded-full">
+                    <Activity className="text-muted-foreground h-8 w-8" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold">
+                      {searchQuery.trim()
+                        ? "No usage records found"
+                        : "No usage records yet"}
+                    </h3>
+                    <p className="text-muted-foreground max-w-md text-sm">
+                      {searchQuery.trim()
+                        ? `No usage records match "${searchQuery}". Try adjusting your search query.`
+                        : "Usage records will appear here when customers start using your metered products. Create a product with metered billing to get started."}
+                    </p>
+                  </div>
+                  {!searchQuery.trim() && (
+                    <div className="mt-4">
+                      <Link href="/dashboard/products">
+                        <button className="text-primary hover:text-primary/80 text-sm font-medium underline-offset-4 transition-colors hover:underline">
+                          Create a product
+                        </button>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <DataTable
+                columns={columns}
+                data={filteredRecords}
+                actions={tableActions}
+                isLoading={true}
+                onRowClick={(row) => {
+                  // Navigate to customer page
+                  router.push(`/dashboard/usage/${row.id}`);
+                }}
+              />
+            )}
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
