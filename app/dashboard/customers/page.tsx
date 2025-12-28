@@ -30,9 +30,6 @@ import { useRouter } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 
-const ORGANIZATION_ID = "org_placeholder";
-const ENVIRONMENT = "testnet";
-
 const columns: ColumnDef<Customer>[] = [
   {
     accessorKey: "name",
@@ -211,8 +208,8 @@ export default function CustomersPage() {
   const router = useRouter();
 
   const { data: customers, isLoading: isLoadingCustomers } = useQuery({
-    queryKey: [ORGANIZATION_ID, "customers"],
-    queryFn: () => retrieveCustomers(ORGANIZATION_ID, ENVIRONMENT),
+    queryKey: ["customers"],
+    queryFn: () => retrieveCustomers(),
   });
 
   const handleRowClick = (customer: Customer) => {
@@ -444,7 +441,7 @@ export function CustomerModal({
             <div>
               <h3 className="mb-2 text-lg font-semibold">Basic Information</h3>
               <p className="text-muted-foreground text-sm">
-                Enter the customer&apos;s basic contact information.
+                Enter the customer&’s basic contact information.
               </p>
             </div>
 

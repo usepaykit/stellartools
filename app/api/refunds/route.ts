@@ -36,8 +36,8 @@ export const POST = async (req: NextRequest) => {
   const { organizationId, environment } = await resolveApiKey(apiKey);
 
   const [payment, organization, asset] = await Promise.all([
-    retrievePayment(data.paymentId, organizationId),
-    retrieveOrganization({ id: organizationId }),
+    retrievePayment(data.paymentId, organizationId, environment),
+    retrieveOrganization(organizationId),
     retrieveAsset(data.assetId),
   ]);
 
@@ -80,10 +80,15 @@ export const POST = async (req: NextRequest) => {
 
   if (refundResult.error) {
     await tryCatchAsync(
-      triggerWebhooks(organizationId, "refund.failed", {
-        refund: data,
-        error: refundResult.error,
-      })
+      triggerWebhooks(
+        "refund.failed",
+        {
+          refund: data,
+          error: refundResult.error,
+        },
+        organizationId,
+        environment
+      )
     );
 
     return NextResponse.json({ error: refundResult.error }, { status: 500 });
@@ -97,7 +102,7 @@ export const POST = async (req: NextRequest) => {
   });
 
   await tryCatchAsync(
-    triggerWebhooks(organizationId, "refund.succeeded", { refund })
+    triggerWebhooks("refund.succeeded", { refund }, organizationId, environment)
   );
 
   return NextResponse.json({ data: refund });

@@ -50,9 +50,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
-const ORGANIZATION_ID = "org_placeholder";
-const ENVIRONMENT = "testnet";
-
 const StatusBadge = ({ status }: { status: Payment["status"] }) => {
   const variants = {
     confirmed: {
@@ -177,13 +174,12 @@ export default function CustomerDetailPage() {
 
   const { data: payments, isLoading: isLoadingPayments } = useQuery({
     queryKey: ["payments", customerId],
-    queryFn: () =>
-      retrievePayments(ORGANIZATION_ID, { customerId }, ENVIRONMENT),
+    queryFn: () => retrievePayments(undefined, { customerId }, undefined),
   });
 
   const { data: customer, isLoading: _customerLoading } = useQuery({
     queryKey: ["customer", customerId],
-    queryFn: () => retrieveCustomer(customerId, ORGANIZATION_ID),
+    queryFn: () => retrieveCustomer(customerId),
   });
 
   const handleToggleWalletVisibility = (walletId: string) => {
@@ -252,7 +248,7 @@ export default function CustomerDetailPage() {
               <div className="py-12 text-center">
                 <h1 className="mb-2 text-2xl font-bold">Customer not found</h1>
                 <p className="text-muted-foreground mb-4">
-                  The customer you&apos;re looking for doesn&apos;t exist.
+                  The customer you&’re looking for doesn&’t exist.
                 </p>
                 <Button onClick={() => router.push("/dashboard/customers")}>
                   Back to Customers

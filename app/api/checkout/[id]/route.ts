@@ -21,9 +21,9 @@ export const GET = async (
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { organizationId } = await resolveApiKey(apiKey);
+  const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  const checkout = await retrieveCheckout(id, organizationId);
+  const checkout = await retrieveCheckout(id, organizationId, environment);
 
   return NextResponse.json({ data: checkout });
 };
@@ -47,13 +47,13 @@ export const PUT = async (
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { organizationId } = await resolveApiKey(apiKey);
+  const { organizationId, environment } = await resolveApiKey(apiKey);
 
   const { error, data } = putCheckoutSchema.safeParse(await req.json());
 
   if (error) return NextResponse.json({ error }, { status: 400 });
 
-  const checkout = await putCheckout(id, organizationId, data);
+  const checkout = await putCheckout(id, data, organizationId, environment);
 
   return NextResponse.json({ data: checkout });
 };
@@ -70,9 +70,9 @@ export const DELETE = async (
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { organizationId } = await resolveApiKey(apiKey);
+  const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  await deleteCheckout(id, organizationId);
+  await deleteCheckout(id, organizationId, environment);
 
   return NextResponse.json({ data: null });
 };

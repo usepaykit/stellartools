@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
-import { ApiKey, Network } from "@/db";
+import { ApiKey } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -32,14 +32,10 @@ import {
   Loader2,
   Plus,
 } from "lucide-react";
+import { nanoid } from "nanoid";
 import Link from "next/link";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
-
-// TODO: Get organizationId and environment from context/session
-// For now using placeholder values - these should be obtained from user session or context
-const ORGANIZATION_ID = "org_placeholder";
-const ENVIRONMENT: Network = "testnet";
 
 const apiKeySchema = z.object({
   name: z
@@ -58,8 +54,8 @@ export default function ApiKeysPage() {
   const queryClient = useQueryClient();
 
   const { data: apiKeys = [], isLoading } = useQuery({
-    queryKey: ["apiKeys", ORGANIZATION_ID, ENVIRONMENT],
-    queryFn: () => retrieveApiKeys(ORGANIZATION_ID, ENVIRONMENT),
+    queryKey: ["apiKeys"],
+    queryFn: () => retrieveApiKeys(),
   });
 
   const { handleCopy } = useCopy();
@@ -308,19 +304,25 @@ function ApiKeyModal({
       });
     }
   };
+
   const createApiKeyMutation = useMutation({
     mutationFn: async (data: ApiKeyFormData) => {
+      const token = `stKey_${nanoid(32)}`;
+
       return await postApiKey({
         name: data.name,
-        organizationId: ORGANIZATION_ID,
-        environment: ENVIRONMENT,
         scope: ["*"],
         isRevoked: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        metadata: null,
+        token,
+        lastUsedAt: null,
       });
     },
     onSuccess: (apiKey) => {
       queryClient.invalidateQueries({
-        queryKey: ["apiKeys", ORGANIZATION_ID, ENVIRONMENT],
+        queryKey: ["apiKeys"],
       });
       onApiKeyCreated(apiKey.token);
       toast.success("API key created", {
@@ -403,7 +405,7 @@ function ApiKeyModal({
           <div className="bg-muted/50 border-border rounded-lg border p-4">
             <p className="text-muted-foreground text-sm">
               <strong className="text-foreground">Important:</strong> Make sure
-              to copy your API key now. You won&apos;t be able to see it again!
+              to copy your API key now. You won&’t be able to see it again!
             </p>
           </div>
           <div className="space-y-2">

@@ -18,7 +18,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/toast";
-import { Network } from "@/db";
 import { Webhook as WebhookSchema } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { cn } from "@/lib/utils";
@@ -58,11 +57,6 @@ interface WebhookDestination extends Pick<
   responseTime?: number[];
   errorRate: number;
 }
-
-// TODO: Get organizationId and environment from context/session
-// For now using placeholder values - these should be obtained from user session or context
-const ORGANIZATION_ID = "org_placeholder";
-const ENVIRONMENT: Network = "testnet";
 
 const StatusBadge = ({ isDisabled }: { isDisabled: boolean }) => {
   return (
@@ -272,9 +266,9 @@ function WebhooksPageContent() {
   const searchParams = useSearchParams();
 
   const { data: webhooks = [], isLoading } = useQuery({
-    queryKey: ["webhooks", ORGANIZATION_ID, ENVIRONMENT],
+    queryKey: ["webhooks"],
     queryFn: async () => {
-      return await getWebhooksWithAnalytics(ORGANIZATION_ID, ENVIRONMENT);
+      return await getWebhooksWithAnalytics();
     },
     select: (webhooksData) => {
       return webhooksData.map((webhook) => ({
@@ -399,9 +393,9 @@ function WebhooksPageContent() {
                         </Badge>
                       </div>
                       <p className="text-muted-foreground/80 mx-auto max-w-md text-sm">
-                        We&apos;re building a comprehensive overview dashboard
-                        that will give you insights into your webhook
-                        performance, analytics, and real-time monitoring.
+                        We&’re building a comprehensive overview dashboard that
+                        will give you insights into your webhook performance,
+                        analytics, and real-time monitoring.
                       </p>
                     </div>
 
@@ -470,12 +464,8 @@ function WebhooksPageContent() {
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
-      <WebHooksModal
-        open={isModalOpen}
-        onOpenChange={setIsModalOpen}
-        organizationId={ORGANIZATION_ID}
-        environment={ENVIRONMENT}
-      />
+
+      <WebooksModal open={isModalOpen} onOpenChange={setIsModalOpen} />
     </div>
   );
 }
@@ -613,13 +603,6 @@ const schema = z.object({
   events: z.array(z.string()).min(1, "Please select at least one event"),
 });
 
-interface WebhooksModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  organizationId: string;
-  environment: Network;
-}
-
 const WEBHOOK_EVENTS = [
   { id: "customer.created", label: "Customer Created" },
   { id: "customer.updated", label: "Customer Updated" },
@@ -633,12 +616,12 @@ const WEBHOOK_EVENTS = [
   { id: "refund.failed", label: "Refund Failed" },
 ] as const satisfies { id: WebhookEvent[number]; label: string }[];
 
-function WebHooksModal({
-  open,
-  onOpenChange,
-  organizationId,
-  environment,
-}: WebhooksModalProps) {
+interface WebhooksModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
   const formRef = React.useRef<HTMLFormElement>(null);
   const queryClient = useQueryClient();
   const [webhookSecret, setWebhookSecret] = React.useState<string>("");
@@ -676,18 +659,21 @@ function WebHooksModal({
   // Create webhook mutation
   const createWebhookMutation = useMutation({
     mutationFn: async (data: z.infer<typeof schema>) => {
-      return await postWebhook(organizationId, {
+      return await postWebhook(undefined, undefined, {
         name: data.destinationName,
         url: data.endpointUrl,
-        description: data.description || undefined,
+        description: data.description ?? null,
         events: data.events as WebhookEvent[],
-        environment,
+        isDisabled: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        secret: webhookSecret,
       });
     },
     onSuccess: (webhook) => {
       // Invalidate and refetch webhooks
       queryClient.invalidateQueries({
-        queryKey: ["webhooks", organizationId, environment],
+        queryKey: ["webhooks"],
       });
       toast.success("Webhook destination created successfully", {
         description: `${webhook.name} is now configured to receive events.`,

@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import * as React from "react";
 
+import { accountValidator } from "@/actions/auth";
 import { Google } from "@/components/icon";
 import { TextField } from "@/components/input-picker";
 import { Button } from "@/components/ui/button";
@@ -15,18 +16,17 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
 const signInSchema = z.object({
   email: z.email().toLowerCase(),
-  password: z
-    .string()
-    .min(1, "Password is required")
-    .min(8, "Password must be at least 8 characters"),
+  password: z.string().min(1, "Password is required"),
   rememberMe: z.boolean(),
 });
 
@@ -34,8 +34,35 @@ type SignInFormData = z.infer<typeof signInSchema>;
 
 export default function SignIn() {
   const [showPassword, setShowPassword] = React.useState(false);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
+  const redirect = searchParams.get("redirect") ?? "/dashboard";
+
+  const signinMutation = useMutation({
+    mutationFn: async (data: { email: string; password: string }) => {
+      return await accountValidator(
+        data.email,
+        {
+          provider: "local",
+          sub: data.password,
+        },
+        "SIGN_IN",
+        undefined,
+        { intent: "SIGN_IN" }
+      );
+    },
+    onSuccess: () => {
+      toast.success("Logged in successfully");
+      router.push("/dashboard/select-organization");
+    },
+    onError: (error: Error) => {
+      toast.error("Sign-in failed", {
+        id: "signin-err",
+        description: error.message,
+      });
+    },
+  });
   const form = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
     defaultValues: {
@@ -46,39 +73,25 @@ export default function SignIn() {
   });
 
   const onSubmit = async (data: SignInFormData) => {
-    setIsSubmitting(true);
-
-    try {
-      console.log("Sign-in attempt:", {
-        email: data.email,
-        rememberMe: data.rememberMe,
-        timestamp: new Date().toISOString(),
-      });
-      toast.success("Signed in successfully");
-    } catch (error) {
-      console.error("Sign-in error:", error);
-      toast.error("Sign-in failed", {
-        description:
-          error instanceof Error
-            ? error.message
-            : "Invalid email or password. Please try again.",
-      } as Parameters<typeof toast.error>[1]);
-    } finally {
-      setIsSubmitting(false);
-    }
+    signinMutation.mutate(data);
   };
 
-  const handleGoogleSignIn = async () => {
-    try {
-      console.log("Google sign-in initiated");
-      toast.info("Google sign-in", {
-        description: "Redirecting to Google authentication...",
-      } as Parameters<typeof toast.info>[1]);
-    } catch (error) {
-      console.error("Google sign-in error:", error);
-      toast.error("Google sign-in failed");
-    }
-  };
+  const handleGoogleSignIn = React.useCallback(async () => {
+    const authUrlDomain = "https://accounts.google.com/o/oauth2/v2/auth";
+
+    const authUrlParams = {
+      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+      redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/verify-callback`,
+      response_type: "code",
+      scope: "openid profile email",
+      access_type: "offline",
+      prompt: "consent",
+      state: btoa(JSON.stringify({ intent: "SIGN_IN", redirect })),
+    };
+
+    const authUrl = `${authUrlDomain}?${new URLSearchParams(authUrlParams as Record<string, string>)}`;
+    router.push(authUrl);
+  }, [router, redirect]);
 
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
@@ -179,7 +192,8 @@ export default function SignIn() {
             type="button"
             variant="ghost"
             onClick={handleGoogleSignIn}
-            className="hover:bg-muted flex w-full items-center gap-2.5 rounded-lg border px-10 py-2.5 shadow-none transition-colors"
+            className="hover:bg-muted flex w-full cursor-pointer items-center gap-2.5 rounded-lg border px-10 py-2.5 shadow-none transition-colors"
+            disabled={signinMutation.isPending}
           >
             <Google className="h-5 w-5" />
             <span className="text-foreground text-sm font-semibold">
@@ -218,7 +232,7 @@ export default function SignIn() {
                 Password
               </Label>
               <Link
-                href="/auth/forgot-password"
+                href="/forgot-password"
                 className="hover:text-foreground text-sm font-semibold underline transition-colors"
               >
                 Forgot password?
@@ -291,9 +305,9 @@ export default function SignIn() {
           <Button
             type="submit"
             className="w-full rounded-md font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg focus:ring-4"
-            disabled={isSubmitting}
+            disabled={signinMutation.isPending}
           >
-            {isSubmitting ? (
+            {signinMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Signing in...
@@ -324,9 +338,9 @@ export default function SignIn() {
 
           <div className="w-full text-center">
             <p className="text-muted-foreground text-sm">
-              Don&apos;t have an account?{" "}
+              Don&’t have an account?{" "}
               <Link
-                href="/auth/signup"
+                href="/signup"
                 className="hover:text-foreground font-semibold underline transition-colors"
               >
                 Sign up
