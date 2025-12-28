@@ -12,11 +12,11 @@ export default function HeroSection() {
         <div className="mx-auto max-w-3xl">
           <div className="mb-12 text-center">
             <h1 className="mb-6 text-4xl leading-tight font-semibold tracking-tight sm:text-5xl lg:text-6xl">
-              Bring Stellar Payments to Every Platform Instantly
+              Stripe for Stellar
             </h1>
             <p className="text-muted-foreground mb-8 text-lg leading-8 sm:text-xl">
-              Stellar SDK adapters for BetterAuth, Medusa, Shopify, and many
-              more to make crypto-native payments seamless for your users.
+              The easiest way to accept Stellar blockchain payments. Unified adapters for BetterAuth, Medusa, Shopify, and many
+              more to make crypto-native payments seamless for your users—just like Stripe, but for crypto.
             </p>
           </div>
 
