@@ -64,7 +64,7 @@ export const organizations = pgTable("organization", {
   phoneNumber: text("phone_number"),
   address: text("address"),
   socialLinks: jsonb("social_links").$type<object>().default({}),
-  settings: jsonb("settings").$type<object>().notNull(),
+  settings: jsonb("settings").$type<object | null>().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object | null>(),

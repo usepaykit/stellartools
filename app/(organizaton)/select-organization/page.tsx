@@ -232,6 +232,8 @@ const CreateOrganizationModal = ({
         createdAt: new Date(),
         updatedAt: new Date(),
         metadata: null,
+        address: null,
+        socialLinks: null,
       });
 
       return org;

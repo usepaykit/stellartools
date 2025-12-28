@@ -1,5 +1,5 @@
 {
-  "id": "f1afa0ed-dbf0-4be3-b2d5-6ddd0683556a",
+  "id": "d069adfe-1288-451f-8a02-e12d7154b274",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -16,12 +16,6 @@
         },
         "email": {
           "name": "email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_name": {
-          "name": "user_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -56,15 +50,7 @@
           "name": "metadata",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'{}'::jsonb"
-        },
-        "is_onboarded": {
-          "name": "is_onboarded",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
+          "notNull": false
         }
       },
       "indexes": {},
@@ -74,7 +60,9 @@
         "account_email_unique": {
           "name": "account_email_unique",
           "nullsNotDistinct": false,
-          "columns": ["email"]
+          "columns": [
+            "email"
+          ]
         }
       },
       "policies": {},
@@ -163,8 +151,12 @@
           "name": "api_key_organization_id_organization_id_fk",
           "tableFrom": "api_key",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -174,7 +166,9 @@
         "api_key_token_unique": {
           "name": "api_key_token_unique",
           "nullsNotDistinct": false,
-          "columns": ["token"]
+          "columns": [
+            "token"
+          ]
         }
       },
       "policies": {},
@@ -240,7 +234,11 @@
         "asset_code_issuer_network_unique": {
           "name": "asset_code_issuer_network_unique",
           "nullsNotDistinct": false,
-          "columns": ["code", "issuer", "network"]
+          "columns": [
+            "code",
+            "issuer",
+            "network"
+          ]
         }
       },
       "policies": {},
@@ -323,8 +321,12 @@
           "name": "auth_account_id_account_id_fk",
           "tableFrom": "auth",
           "tableTo": "account",
-          "columnsFrom": ["account_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -372,6 +374,12 @@
         "amount": {
           "name": "amount",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "asset_id": {
+          "name": "asset_id",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -435,8 +443,12 @@
           "name": "checkout_organization_id_organization_id_fk",
           "tableFrom": "checkout",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -444,8 +456,12 @@
           "name": "checkout_api_key_id_api_key_id_fk",
           "tableFrom": "checkout",
           "tableTo": "api_key",
-          "columnsFrom": ["api_key_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "api_key_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -453,8 +469,12 @@
           "name": "checkout_customer_id_customer_id_fk",
           "tableFrom": "checkout",
           "tableTo": "customer",
-          "columnsFrom": ["customer_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "customer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -462,8 +482,25 @@
           "name": "checkout_product_id_product_id_fk",
           "tableFrom": "checkout",
           "tableTo": "product",
-          "columnsFrom": ["product_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "product_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "checkout_asset_id_asset_id_fk": {
+          "name": "checkout_asset_id_asset_id_fk",
+          "tableFrom": "checkout",
+          "tableTo": "asset",
+          "columnsFrom": [
+            "asset_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -591,8 +628,12 @@
           "name": "credit_balance_organization_id_organization_id_fk",
           "tableFrom": "credit_balance",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -600,8 +641,12 @@
           "name": "credit_balance_customer_id_customer_id_fk",
           "tableFrom": "credit_balance",
           "tableTo": "customer",
-          "columnsFrom": ["customer_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "customer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -609,8 +654,12 @@
           "name": "credit_balance_product_id_product_id_fk",
           "tableFrom": "credit_balance",
           "tableTo": "product",
-          "columnsFrom": ["product_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "product_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -620,7 +669,11 @@
         "credit_balance_customer_id_product_id_network_unique": {
           "name": "credit_balance_customer_id_product_id_network_unique",
           "nullsNotDistinct": false,
-          "columns": ["customer_id", "product_id", "network"]
+          "columns": [
+            "customer_id",
+            "product_id",
+            "network"
+          ]
         }
       },
       "policies": {},
@@ -771,8 +824,12 @@
           "name": "credit_transaction_organization_id_organization_id_fk",
           "tableFrom": "credit_transaction",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -780,8 +837,12 @@
           "name": "credit_transaction_customer_id_customer_id_fk",
           "tableFrom": "credit_transaction",
           "tableTo": "customer",
-          "columnsFrom": ["customer_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "customer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -789,8 +850,12 @@
           "name": "credit_transaction_product_id_product_id_fk",
           "tableFrom": "credit_transaction",
           "tableTo": "product",
-          "columnsFrom": ["product_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "product_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -798,8 +863,12 @@
           "name": "credit_transaction_balance_id_credit_balance_id_fk",
           "tableFrom": "credit_transaction",
           "tableTo": "credit_balance",
-          "columnsFrom": ["balance_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "balance_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -885,8 +954,12 @@
           "name": "customer_organization_id_organization_id_fk",
           "tableFrom": "customer",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -896,7 +969,10 @@
         "customer_organization_id_email_unique": {
           "name": "customer_organization_id_email_unique",
           "nullsNotDistinct": false,
-          "columns": ["organization_id", "email"]
+          "columns": [
+            "organization_id",
+            "email"
+          ]
         }
       },
       "policies": {},
@@ -931,12 +1007,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "slug": {
-          "name": "slug",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
         "logo_url": {
           "name": "logo_url",
           "type": "text",
@@ -949,11 +1019,18 @@
           "primaryKey": false,
           "notNull": false
         },
-        "owner_account_id": {
-          "name": "owner_account_id",
+        "address": {
+          "name": "address",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "social_links": {
+          "name": "social_links",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{}'::jsonb"
         },
         "settings": {
           "name": "settings",
@@ -979,15 +1056,7 @@
           "name": "metadata",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'{}'::jsonb"
-        },
-        "network": {
-          "name": "network",
-          "type": "network",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "stellar_account": {
           "name": "stellar_account",
@@ -1002,17 +1071,12 @@
           "name": "organization_account_id_account_id_fk",
           "tableFrom": "organization",
           "tableTo": "account",
-          "columnsFrom": ["account_id"],
-          "columnsTo": ["id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "organization_owner_account_id_account_id_fk": {
-          "name": "organization_owner_account_id_account_id_fk",
-          "tableFrom": "organization",
-          "tableTo": "account",
-          "columnsFrom": ["owner_account_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1094,8 +1158,12 @@
           "name": "password_reset_account_id_account_id_fk",
           "tableFrom": "password_reset",
           "tableTo": "account",
-          "columnsFrom": ["account_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1105,7 +1173,9 @@
         "password_reset_token_unique": {
           "name": "password_reset_token_unique",
           "nullsNotDistinct": false,
-          "columns": ["token"]
+          "columns": [
+            "token"
+          ]
         }
       },
       "policies": {},
@@ -1193,8 +1263,12 @@
           "name": "payment_organization_id_organization_id_fk",
           "tableFrom": "payment",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1202,8 +1276,12 @@
           "name": "payment_checkout_id_checkout_id_fk",
           "tableFrom": "payment",
           "tableTo": "checkout",
-          "columnsFrom": ["checkout_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "checkout_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1211,8 +1289,12 @@
           "name": "payment_customer_id_customer_id_fk",
           "tableFrom": "payment",
           "tableTo": "customer",
-          "columnsFrom": ["customer_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "customer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1220,8 +1302,12 @@
           "name": "payment_asset_id_asset_id_fk",
           "tableFrom": "payment",
           "tableTo": "asset",
-          "columnsFrom": ["asset_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "asset_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1231,7 +1317,9 @@
         "payment_tx_hash_unique": {
           "name": "payment_tx_hash_unique",
           "nullsNotDistinct": false,
-          "columns": ["tx_hash"]
+          "columns": [
+            "tx_hash"
+          ]
         }
       },
       "policies": {},
@@ -1288,13 +1376,6 @@
         "type": {
           "name": "type",
           "type": "product_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "billing_type": {
-          "name": "billing_type",
-          "type": "billing_type",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
@@ -1385,8 +1466,12 @@
           "name": "product_organization_id_organization_id_fk",
           "tableFrom": "product",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1394,8 +1479,12 @@
           "name": "product_asset_id_asset_id_fk",
           "tableFrom": "product",
           "tableTo": "asset",
-          "columnsFrom": ["asset_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "asset_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1506,8 +1595,12 @@
           "name": "refund_organization_id_organization_id_fk",
           "tableFrom": "refund",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1515,8 +1608,12 @@
           "name": "refund_payment_id_payment_id_fk",
           "tableFrom": "refund",
           "tableTo": "payment",
-          "columnsFrom": ["payment_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "payment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1524,8 +1621,12 @@
           "name": "refund_customer_id_customer_id_fk",
           "tableFrom": "refund",
           "tableTo": "customer",
-          "columnsFrom": ["customer_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "customer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1533,8 +1634,12 @@
           "name": "refund_asset_id_asset_id_fk",
           "tableFrom": "refund",
           "tableTo": "asset",
-          "columnsFrom": ["asset_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "asset_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1544,12 +1649,18 @@
         "refund_tx_hash_unique": {
           "name": "refund_tx_hash_unique",
           "nullsNotDistinct": false,
-          "columns": ["tx_hash"]
+          "columns": [
+            "tx_hash"
+          ]
         },
         "refund_payment_id_customer_id_asset_id_unique": {
           "name": "refund_payment_id_customer_id_asset_id_unique",
           "nullsNotDistinct": false,
-          "columns": ["payment_id", "customer_id", "asset_id"]
+          "columns": [
+            "payment_id",
+            "customer_id",
+            "asset_id"
+          ]
         }
       },
       "policies": {},
@@ -1676,8 +1787,12 @@
           "name": "subscription_customer_id_customer_id_fk",
           "tableFrom": "subscription",
           "tableTo": "customer",
-          "columnsFrom": ["customer_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "customer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1685,8 +1800,12 @@
           "name": "subscription_product_id_product_id_fk",
           "tableFrom": "subscription",
           "tableTo": "product",
-          "columnsFrom": ["product_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "product_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1694,8 +1813,12 @@
           "name": "subscription_organization_id_organization_id_fk",
           "tableFrom": "subscription",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1769,8 +1892,12 @@
           "name": "team_invite_organization_id_organization_id_fk",
           "tableFrom": "team_invite",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1838,8 +1965,12 @@
           "name": "team_member_organization_id_organization_id_fk",
           "tableFrom": "team_member",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1847,8 +1978,12 @@
           "name": "team_member_account_id_account_id_fk",
           "tableFrom": "team_member",
           "tableTo": "account",
-          "columnsFrom": ["account_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1858,7 +1993,10 @@
         "team_member_organization_id_account_id_unique": {
           "name": "team_member_organization_id_account_id_unique",
           "nullsNotDistinct": false,
-          "columns": ["organization_id", "account_id"]
+          "columns": [
+            "organization_id",
+            "account_id"
+          ]
         }
       },
       "policies": {},
@@ -1893,8 +2031,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "payload": {
-          "name": "payload",
+        "request": {
+          "name": "request",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true
@@ -1931,10 +2069,34 @@
           "primaryKey": false,
           "notNull": false
         },
+        "response": {
+          "name": "response",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "api_version": {
+          "name": "api_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "network": {
           "name": "network",
           "type": "network",
           "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "next_retry": {
+          "name": "next_retry",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         }
@@ -1945,8 +2107,12 @@
           "name": "webhook_log_webhook_id_webhook_id_fk",
           "tableFrom": "webhook_log",
           "tableTo": "webhook",
-          "columnsFrom": ["webhook_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "webhook_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1954,8 +2120,12 @@
           "name": "webhook_log_organization_id_organization_id_fk",
           "tableFrom": "webhook_log",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2047,8 +2217,12 @@
           "name": "webhook_organization_id_organization_id_fk",
           "tableFrom": "webhook",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2064,72 +2238,119 @@
     "public.asset_code": {
       "name": "asset_code",
       "schema": "public",
-      "values": ["XLM", "USDC"]
+      "values": [
+        "XLM",
+        "USDC"
+      ]
     },
     "public.auth_provider": {
       "name": "auth_provider",
       "schema": "public",
-      "values": ["google", "local"]
-    },
-    "public.billing_type": {
-      "name": "billing_type",
-      "schema": "public",
-      "values": ["one_time", "recurring", "metered"]
+      "values": [
+        "google",
+        "local"
+      ]
     },
     "public.checkout_status": {
       "name": "checkout_status",
       "schema": "public",
-      "values": ["open", "completed", "expired", "failed"]
+      "values": [
+        "open",
+        "completed",
+        "expired",
+        "failed"
+      ]
     },
     "public.credit_transaction_type": {
       "name": "credit_transaction_type",
       "schema": "public",
-      "values": ["deduct", "refund", "grant"]
+      "values": [
+        "deduct",
+        "refund",
+        "grant"
+      ]
     },
     "public.network": {
       "name": "network",
       "schema": "public",
-      "values": ["testnet", "mainnet"]
+      "values": [
+        "testnet",
+        "mainnet"
+      ]
     },
     "public.payment_status": {
       "name": "payment_status",
       "schema": "public",
-      "values": ["pending", "confirmed", "failed"]
+      "values": [
+        "pending",
+        "confirmed",
+        "failed"
+      ]
     },
     "public.product_status": {
       "name": "product_status",
       "schema": "public",
-      "values": ["active", "archived"]
+      "values": [
+        "active",
+        "archived"
+      ]
     },
     "public.product_type": {
       "name": "product_type",
       "schema": "public",
-      "values": ["subscription", "one_time", "metered"]
+      "values": [
+        "subscription",
+        "one_time",
+        "metered"
+      ]
     },
     "public.recurring_period": {
       "name": "recurring_period",
       "schema": "public",
-      "values": ["day", "week", "month", "year"]
+      "values": [
+        "day",
+        "week",
+        "month",
+        "year"
+      ]
     },
     "public.refund_status": {
       "name": "refund_status",
       "schema": "public",
-      "values": ["pending", "succeeded", "failed"]
+      "values": [
+        "pending",
+        "succeeded",
+        "failed"
+      ]
     },
     "public.role": {
       "name": "role",
       "schema": "public",
-      "values": ["owner", "admin", "developer", "viewer"]
+      "values": [
+        "owner",
+        "admin",
+        "developer",
+        "viewer"
+      ]
     },
     "public.subscription_status": {
       "name": "subscription_status",
       "schema": "public",
-      "values": ["active", "past_due", "canceled", "paused"]
+      "values": [
+        "active",
+        "past_due",
+        "canceled",
+        "paused"
+      ]
     },
     "public.team_invite_status": {
       "name": "team_invite_status",
       "schema": "public",
-      "values": ["pending", "accepted", "rejected"]
+      "values": [
+        "pending",
+        "accepted",
+        "rejected"
+      ]
     }
   },
   "schemas": {},
