@@ -30,9 +30,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
-import { Network, RecurringPeriod } from "@/db";
+import { RecurringPeriod } from "@/db";
 import { Product as ProductSchema } from "@/db";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -86,8 +85,6 @@ const productSchema = z.object({
       ),
     asset: z.string().min(1, "Asset is required"),
   }),
-  phoneNumberEnabled: z.boolean(),
-
   unit: z.string().optional(),
   unitsPerCredit: z.number().min(1).default(1).optional(),
   unitDivisor: z.number().min(1).optional(),
@@ -95,11 +92,6 @@ const productSchema = z.object({
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
-
-// TODO: Get organizationId and environment from context/session
-// For now using placeholder values - these should be obtained from user session or context
-const ORGANIZATION_ID = "org_placeholder";
-const ENVIRONMENT: Network = "testnet";
 
 const SortableHeader = ({
   column,
@@ -218,8 +210,8 @@ function ProductsPageContent() {
   );
 
   const { data: products, isLoading } = useQuery({
-    queryKey: ["products", ORGANIZATION_ID, ENVIRONMENT],
-    queryFn: () => retrieveProductsWithAsset(ORGANIZATION_ID, ENVIRONMENT),
+    queryKey: ["products"],
+    queryFn: () => retrieveProductsWithAsset(),
     select: (productsData) => {
       return productsData.map(({ product, asset }) => {
         return {
@@ -400,7 +392,6 @@ function ProductsModal({
       billingCycle: "subscription",
       recurringPeriod: "month",
       price: { amount: "", asset: "XLM" },
-      phoneNumberEnabled: false,
       unitDivisor: 1,
       unitsPerCredit: 1,
       creditsGranted: 0,
@@ -427,7 +418,6 @@ function ProductsModal({
         billingCycle: "subscription",
         recurringPeriod: "month",
         price: { amount: "", asset: "XLM" },
-        phoneNumberEnabled: false,
       });
     }
   }, [open, editingProduct, form]);
@@ -444,25 +434,27 @@ function ProductsModal({
 
       const images: Array<string> = []; // todo: upload images to storage and get the url
 
-      const productData = {
+      const productData: Parameters<typeof postProduct>[0] = {
         name: data.name,
-        description: data.description,
+        description: data.description ?? null,
         images,
         billingType: data.billingCycle,
         assetId: data.price.asset,
-        phoneNumberRequired: data.phoneNumberEnabled,
         status: "active" as const,
-        organizationId: ORGANIZATION_ID,
-        environment: ENVIRONMENT,
         metadata,
         priceAmount: parseFloat(data.price.amount),
-        recurringPeriod: data.recurringPeriod,
+        recurringPeriod: data.recurringPeriod ?? null,
 
         // Meter
-        unit: data.unit,
-        unitDivisor: data.unitDivisor,
-        unitsPerCredit: data.unitsPerCredit,
-        creditsGranted: data.creditsGranted,
+        unit: data.unit ?? null,
+        unitDivisor: data.unitDivisor ?? null,
+        unitsPerCredit: data.unitsPerCredit ?? null,
+        creditsGranted: data.creditsGranted ?? null,
+        creditExpiryDays: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isArchived: false,
+        type: "one_time", // todo: fix from silas pr.
       };
 
       return await postProduct(productData);
@@ -470,7 +462,7 @@ function ProductsModal({
     onSuccess: () => {
       // Invalidate and refetch products
       queryClient.invalidateQueries({
-        queryKey: ["products", ORGANIZATION_ID, ENVIRONMENT],
+        queryKey: ["products"],
       });
       toast.success(
         isEditMode ? "Product updated successfully!" : "Product created!"
@@ -734,34 +726,6 @@ function ProductsModal({
                   />
                 )}
               </div>
-            </div>
-
-            <div className="flex items-center justify-between border-t pt-4">
-              <RHF.Controller
-                control={form.control}
-                name="phoneNumberEnabled"
-                render={({ field }) => (
-                  <div className="flex w-full items-center justify-between space-x-2">
-                    <div className="space-y-0.5">
-                      <Label
-                        htmlFor="phoneNumberEnabled"
-                        className="flex flex-col items-start gap-1"
-                      >
-                        Require phone number
-                        <p className="text-muted-foreground text-xs">
-                          Customers must provide a phone number
-                        </p>
-                      </Label>
-                    </div>
-
-                    <Switch
-                      id="phoneNumberEnabled"
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </div>
-                )}
-              />
             </div>
           </div>
 

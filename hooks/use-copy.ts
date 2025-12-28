@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 
 export function useCopy() {
   const [copied, setCopied] = React.useState(false);
@@ -15,7 +15,9 @@ export function useCopy() {
   }) => {
     await navigator.clipboard.writeText(text);
     setCopied(true);
-    toast.success(message);
+    toast.success(message, {
+      id: "copy-message",
+    });
     setTimeout(() => setCopied(false), 2000);
   };
 

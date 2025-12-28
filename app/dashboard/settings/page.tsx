@@ -8,9 +8,11 @@ import { DataTable, TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { TextAreaField, TextField } from "@/components/input-picker";
 import {
-  type PhoneNumber,
+  PhoneNumber,
   PhoneNumberPicker,
+  phoneNumberFromString,
 } from "@/components/phone-number-picker";
+import { TagInputPicker } from "@/components/tag-input-picker";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -44,22 +46,25 @@ import {
   UnderlineTabsList,
   UnderlineTabsTrigger,
 } from "@/components/underline-tabs";
-import { cn } from "@/lib/utils";
+import { useCopy } from "@/hooks/use-copy";
+import { cn, getInitials } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   Calendar,
   Camera,
+  Check,
   ChevronRight,
+  Copy,
   ExternalLink,
   Loader2,
-  Lock,
   Mail,
   Plus,
   Save,
   User,
 } from "lucide-react";
 import moment from "moment";
+import { nanoid } from "nanoid";
 import Link from "next/link";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
@@ -69,7 +74,6 @@ const mockUser = {
   id: "user_123",
   name: "Prince Ajuzie",
   email: "princeajuzie1@gmail.com",
-  phoneNumber: { number: "1234567890", countryCode: "US" } as PhoneNumber,
   avatar: null,
   joinedAt: new Date("2024-12-01"),
 };
@@ -77,8 +81,8 @@ const mockUser = {
 const mockOrganization = {
   id: "org_123",
   name: "Acme Inc",
-  slug: "acme-inc",
   description: "A leading payment processing company",
+  phoneNumber: "+1 (123) 456-7890",
   logo: null,
   createdAt: new Date("2024-01-15"),
 };
@@ -147,13 +151,6 @@ const profileSchema = z.object({
     .min(2, "Name must be at least 2 characters")
     .max(100, "Name must be less than 100 characters")
     .trim(),
-  phoneNumber: z
-    .object({
-      number: z.string(),
-      countryCode: z.string(),
-    })
-    .optional()
-    .nullable(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -165,31 +162,24 @@ const organizationSchema = z.object({
     .min(2, "Name must be at least 2 characters")
     .max(100, "Name must be less than 100 characters")
     .trim(),
-  slug: z
-    .string()
-    .min(1)
-    .min(2)
-    .max(50)
-    .regex(
-      /^[a-z0-9-]+$/,
-      "Slug can only contain lowercase letters, numbers, and hyphens"
-    )
-    .refine(
-      (slug) => !slug.startsWith("-") && !slug.endsWith("-"),
-      "Slug cannot start or end with a hyphen"
-    )
-    .trim(),
   description: z
     .string()
     .max(500, "Description must be less than 500 characters")
     .optional()
     .or(z.literal("")),
+  phoneNumber: z
+    .object({
+      number: z.string(),
+      countryCode: z.string(),
+    })
+    .optional()
+    .nullable(),
 });
 
 type OrganizationFormData = z.infer<typeof organizationSchema>;
 
 const inviteMemberSchema = z.object({
-  email: z.email(),
+  emails: z.array(z.string().email()).min(1, "At least one email is required"),
   role: z.enum(["owner", "admin", "developer", "viewer"]),
 });
 
@@ -216,12 +206,14 @@ export default function SettingsPage() {
     React.useState(false);
   const [selectedMemberForRoleUpdate, setSelectedMemberForRoleUpdate] =
     React.useState<TeamMember | null>(null);
+  const [inviteLink, setInviteLink] = React.useState<string | null>(null);
+
+  const { handleCopy, copied } = useCopy();
 
   const profileForm = RHF.useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       name: mockUser.name,
-      phoneNumber: mockUser.phoneNumber || { number: "", countryCode: "US" },
     },
   });
 
@@ -229,15 +221,15 @@ export default function SettingsPage() {
     resolver: zodResolver(organizationSchema),
     defaultValues: {
       name: mockOrganization.name,
-      slug: mockOrganization.slug,
       description: mockOrganization.description || "",
+      phoneNumber: phoneNumberFromString(mockOrganization.phoneNumber),
     },
   });
 
   const inviteMemberForm = RHF.useForm<InviteMemberFormData>({
     resolver: zodResolver(inviteMemberSchema),
     defaultValues: {
-      email: "",
+      emails: [],
       role: "viewer",
     },
   });
@@ -248,23 +240,6 @@ export default function SettingsPage() {
       role: "viewer",
     },
   });
-
-  // Generate slug from name
-  const watchedOrgName = organizationForm.watch("name");
-  React.useEffect(() => {
-    if (watchedOrgName) {
-      const generatedSlug = watchedOrgName
-        .trim()
-        .toLowerCase()
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-+|-+$/g, "");
-      organizationForm.setValue("slug", generatedSlug);
-    }
-  }, [watchedOrgName, organizationForm]);
 
   const onProfileSubmit = async (data: ProfileFormData) => {
     setIsSubmitting(true);
@@ -385,19 +360,19 @@ export default function SettingsPage() {
   const onInviteMemberSubmit = async (data: InviteMemberFormData) => {
     setIsSubmitting(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Inviting team member:", data);
-      toast.success("Invitation sent successfully", {
-        description: `An invitation has been sent to ${data.email}`,
+      const link = `${window.location.origin}/join/${nanoid(25)}`;
+      setInviteLink(link);
+
+      toast.success("Invitation created successfully", {
+        description: `Share the link with ${data.emails.length === 1 ? data.emails[0] : `${data.emails.length} people`}`,
       } as Parameters<typeof toast.success>[1]);
-      inviteMemberForm.reset();
-      setIsInviteModalOpen(false);
+
+      // Don't close modal yet - show the link
       // Optionally switch to pending tab
       setTeamTab("pending");
     } catch (error) {
       console.error("Failed to send invitation:", error);
-      toast.error("Failed to send invitation", {
+      toast.error("Failed to create invitation", {
         description: "Please try again later",
       } as Parameters<typeof toast.error>[1]);
     } finally {
@@ -410,6 +385,7 @@ export default function SettingsPage() {
     if (!isInviteModalOpen) {
       inviteMemberForm.reset();
       setIsSubmitting(false);
+      setInviteLink(null);
     }
   }, [isInviteModalOpen, inviteMemberForm]);
 
@@ -601,7 +577,6 @@ export default function SettingsPage() {
       <DashboardSidebar>
         <DashboardSidebarInset>
           <div className="flex flex-col gap-6 p-4 sm:p-6">
-            {/* Breadcrumbs */}
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem>
@@ -618,7 +593,6 @@ export default function SettingsPage() {
               </BreadcrumbList>
             </Breadcrumb>
 
-            {/* Settings Tabs */}
             <UnderlineTabs
               value={activeTab}
               onValueChange={setActiveTab}
@@ -639,7 +613,6 @@ export default function SettingsPage() {
 
               {/* Profile Tab */}
               <UnderlineTabsContent value="profile" className="mt-6 space-y-6">
-                {/* Profile Information Section */}
                 <Card className="shadow-none">
                   <CardContent className="pt-6">
                     <div className="flex items-start gap-6">
@@ -650,11 +623,7 @@ export default function SettingsPage() {
                             className="object-cover"
                           />
                           <AvatarFallback className="text-lg">
-                            {mockUser.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .toUpperCase()}
+                            {getInitials(mockUser.name)}
                           </AvatarFallback>
                         </Avatar>
                         <label
@@ -676,10 +645,6 @@ export default function SettingsPage() {
                           <CardTitle className="text-xl">
                             Profile Information
                           </CardTitle>
-                          <CardDescription className="mt-1">
-                            Update your personal information and how others see
-                            you on Stellar Tools.
-                          </CardDescription>
                         </div>
                         <div className="text-muted-foreground flex items-center gap-2 text-sm">
                           <Calendar className="h-4 w-4" />
@@ -718,49 +683,16 @@ export default function SettingsPage() {
                         )}
                       />
 
-                      <RHF.Controller
-                        control={profileForm.control}
-                        name="phoneNumber"
-                        render={({ field, fieldState: { error } }) => (
-                          <PhoneNumberPicker
-                            id="phone-number"
-                            label="Phone Number"
-                            value={
-                              field.value || { number: "", countryCode: "US" }
-                            }
-                            onChange={field.onChange}
-                            error={error?.message || null}
-                            disabled={isSubmitting}
-                            groupClassName="w-full shadow-none"
-                          />
-                        )}
-                      />
-
                       <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Label
-                            htmlFor="email"
-                            className="flex items-center gap-2"
-                          >
-                            <Mail className="h-4 w-4" />
-                            Email Address
-                          </Label>
-                          <Badge variant="secondary" className="text-xs">
-                            Read-only
-                          </Badge>
-                        </div>
-                        <div className="relative">
-                          <TextField
-                            id="email"
-                            label=""
-                            value={mockUser.email}
-                            onChange={() => {}}
-                            disabled
-                            error={null}
-                            className="w-full pr-10 shadow-none"
-                          />
-                          <Lock className="text-muted-foreground absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2" />
-                        </div>
+                        <TextField
+                          id="email"
+                          label="Email Address"
+                          value={mockUser.email}
+                          onChange={() => {}}
+                          disabled
+                          error={null}
+                          className="w-full pr-10 shadow-none"
+                        />
                         <p className="text-muted-foreground text-xs">
                           Email cannot be changed for security reasons. Contact
                           support if needed.
@@ -835,7 +767,7 @@ export default function SettingsPage() {
                             Organization Information
                           </CardTitle>
                           <CardDescription className="mt-1">
-                            Update your organization details and branding
+                            Update your organization details and branding.
                           </CardDescription>
                         </div>
                       </div>
@@ -847,7 +779,8 @@ export default function SettingsPage() {
                   <CardHeader>
                     <CardTitle>Organization Details</CardTitle>
                     <CardDescription>
-                      Update your organization name, slug, and description
+                      Update your organization name, phone number, and
+                      description
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -859,6 +792,29 @@ export default function SettingsPage() {
                     >
                       <RHF.Controller
                         control={organizationForm.control}
+                        name="phoneNumber"
+                        render={({ field, fieldState: { error } }) => {
+                          const phoneValue: PhoneNumber = {
+                            number: field.value?.number || "",
+                            countryCode: field.value?.countryCode || "US",
+                          };
+
+                          return (
+                            <PhoneNumberPicker
+                              id="organization-phone-number"
+                              label="Phone Number"
+                              value={phoneValue}
+                              onChange={field.onChange}
+                              error={(error as any)?.number?.message}
+                              disabled={isSubmitting}
+                              groupClassName="w-full shadow-none"
+                            />
+                          );
+                        }}
+                      />
+
+                      <RHF.Controller
+                        control={organizationForm.control}
                         name="name"
                         render={({ field, fieldState: { error } }) => (
                           <TextField
@@ -867,25 +823,6 @@ export default function SettingsPage() {
                             label="Organization Name"
                             error={error?.message || null}
                             className="w-full shadow-none"
-                          />
-                        )}
-                      />
-
-                      <RHF.Controller
-                        control={organizationForm.control}
-                        name="slug"
-                        render={({ field, fieldState: { error } }) => (
-                          <TextField
-                            {...field}
-                            id="organization-slug"
-                            label="Organization Slug"
-                            value={field.value}
-                            onChange={() => {}} // Disabled - read-only
-                            placeholder="acme-inc"
-                            error={error?.message || null}
-                            className="font-mono text-sm shadow-none"
-                            disabled
-                            helpText="This will be used for your subdomain and cannot be changed later."
                           />
                         )}
                       />
@@ -930,9 +867,7 @@ export default function SettingsPage() {
                 </Card>
               </UnderlineTabsContent>
 
-              {/* Team Tab */}
               <UnderlineTabsContent value="team" className="mt-6 space-y-6">
-                {/* Header */}
                 <div className="flex items-start justify-between">
                   <div>
                     <h2 className="text-2xl font-semibold">Team Members</h2>
@@ -955,7 +890,6 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Tabs */}
                 <div className="border-border flex gap-1 border-b">
                   <button
                     type="button"
@@ -985,7 +919,6 @@ export default function SettingsPage() {
                   </button>
                 </div>
 
-                {/* Table Header */}
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-lg font-semibold">
@@ -1001,7 +934,6 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Table */}
                 {teamTableData.length > 0 ? (
                   <div className="[&_tr:hover]:bg-muted/50 [&_th]:text-muted-foreground [&_table]:bg-transparent [&_tbody]:bg-transparent [&_td]:py-4 [&_th]:pb-3 [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_thead]:bg-transparent [&_tr]:border-b [&>div]:bg-transparent [&>div>div]:rounded-none [&>div>div]:border-0 [&>div>div]:shadow-none">
                     <DataTable
@@ -1029,7 +961,6 @@ export default function SettingsPage() {
                 )}
               </UnderlineTabsContent>
 
-              {/* API & Webhooks Tab */}
               <UnderlineTabsContent value="api" className="mt-6 space-y-6">
                 <Card className="shadow-none">
                   <CardHeader>
@@ -1098,77 +1029,114 @@ export default function SettingsPage() {
               disabled={isSubmitting}
               className="shadow-none"
             >
-              Cancel
+              {inviteLink ? "Done" : "Cancel"}
             </Button>
-            <Button
-              type="button"
-              onClick={() =>
-                inviteMemberForm.handleSubmit(onInviteMemberSubmit)()
-              }
-              disabled={isSubmitting}
-              className="gap-2 shadow-none"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                "Send Invitation"
-              )}
-            </Button>
+            {!inviteLink && (
+              <Button
+                type="button"
+                onClick={() =>
+                  inviteMemberForm.handleSubmit(onInviteMemberSubmit)()
+                }
+                disabled={isSubmitting}
+                className="gap-2 shadow-none"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Invitation"
+                )}
+              </Button>
+            )}
           </div>
         }
       >
-        <form
-          onSubmit={inviteMemberForm.handleSubmit(onInviteMemberSubmit)}
-          className="space-y-6"
-        >
-          <RHF.Controller
-            control={inviteMemberForm.control}
-            name="email"
-            render={({ field, fieldState: { error } }) => (
-              <TextField
-                {...field}
-                id="invite-email"
-                label="Email Address"
-                type="email"
-                placeholder="colleague@example.com"
-                error={error?.message || null}
-                className="w-full shadow-none"
-              />
-            )}
-          />
+        {!inviteLink ? (
+          <form
+            onSubmit={inviteMemberForm.handleSubmit(onInviteMemberSubmit)}
+            className="space-y-6"
+          >
+            <RHF.Controller
+              control={inviteMemberForm.control}
+              name="emails"
+              render={({ field, fieldState: { error } }) => {
+                console.log({ error });
+                return (
+                  <TagInputPicker
+                    {...field}
+                    placeholder="colleague@example.com"
+                    className="w-full shadow-none"
+                    label="Email Addresses"
+                    helpText="Press Enter or comma to add multiple emails"
+                    id="invite-emails"
+                    error={error?.message || null}
+                  />
+                );
+              }}
+            />
 
-          <RHF.Controller
-            control={inviteMemberForm.control}
-            name="role"
-            render={({ field, fieldState: { error } }) => (
-              <div className="space-y-2">
-                <Label htmlFor="invite-role">Role</Label>
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id="invite-role" className="w-full">
-                    <SelectValue placeholder="Select a role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="viewer">Viewer</SelectItem>
-                    <SelectItem value="developer">Developer</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="owner">Owner</SelectItem>
-                  </SelectContent>
-                </Select>
-                {error && (
-                  <p className="text-destructive text-sm" role="alert">
-                    {error.message}
+            <RHF.Controller
+              control={inviteMemberForm.control}
+              name="role"
+              render={({ field, fieldState: { error } }) => (
+                <div className="space-y-2">
+                  <Label htmlFor="invite-role">Role</Label>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="invite-role" className="w-full">
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="viewer">Viewer</SelectItem>
+                      <SelectItem value="developer">Developer</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="owner">Owner</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {error && (
+                    <p className="text-destructive text-sm" role="alert">
+                      {error.message}
+                    </p>
+                  )}
+                  <p className="text-muted-foreground text-xs">
+                    Choose the permission level for this team member
                   </p>
-                )}
-                <p className="text-muted-foreground text-xs">
-                  Choose the permission level for this team member
-                </p>
-              </div>
-            )}
-          />
-        </form>
+                </div>
+              )}
+            />
+          </form>
+        ) : (
+          <div className="grid w-full grid-cols-[1fr_auto] items-end gap-2">
+            <TextField
+              id="invite-link"
+              label="Invitation Link"
+              value={inviteLink}
+              onChange={() => {}}
+              disabled
+              error={null}
+              className="w-full shadow-none"
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() =>
+                handleCopy({
+                  text: inviteLink,
+                  message: "Copied to clipboard",
+                })
+              }
+              className="hover:bg-muted-foreground/10 cursor-pointer"
+            >
+              {copied ? (
+                <Check className="h-4 w-4 text-green-600" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        )}
       </FullScreenModal>
 
       {/* Update Role Modal */}

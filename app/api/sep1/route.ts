@@ -1,5 +1,6 @@
 import { retrieveOrganization } from "@/actions/organization";
 import { retrieveActiveProductsWithAsset } from "@/actions/product";
+import { Network } from "@/db";
 import TOML from "@iarna/toml";
 
 const DEFAULT_LOGO_URL = "https://stellartools.io/default-logo.png";
@@ -10,29 +11,31 @@ const PLATFORM_OFFICIAL_EMAIL = "support@stellartools.io";
 const TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
 const MAINNET_PASSPHRASE = "Public Global Stellar Network ; September 2015";
 
+const ENVIRONMENT: Network = "mainnet";
+
 export async function GET(request: Request) {
   const host = request.headers.get("host") || "";
-  const orgSlug = host.split(".")[0];
+  const orgId = host.split(".")[0];
 
-  if (!orgSlug) {
+  if (!orgId) {
     return new Response("Organization not found", { status: 404 });
   }
 
   try {
-    const org = await retrieveOrganization({ slug: orgSlug });
-    const stellarAccount = org.stellarAccounts?.[org.environment];
+    const org = await retrieveOrganization(orgId);
+    const stellarAccount = org.stellarAccounts?.[ENVIRONMENT];
 
     const productsWithAssets = await retrieveActiveProductsWithAsset(
       org.id,
-      org.environment
+      ENVIRONMENT
     );
 
     const networkPassphrase =
-      org.environment === "testnet" ? TESTNET_PASSPHRASE : MAINNET_PASSPHRASE;
+      ENVIRONMENT === "testnet" ? TESTNET_PASSPHRASE : MAINNET_PASSPHRASE;
 
     const orgLogo = org.logoUrl || DEFAULT_LOGO_URL;
-    const orgUrl = `https://${orgSlug}.stellartools.io`;
-    const orgSupportEmail = `${orgSlug}@stellartools.io`;
+    const orgUrl = `https://${orgId}.stellartools.io`;
+    const orgSupportEmail = `${orgId}@stellartools.io`;
     const orgDescription =
       org.description || `${org.name} - Powered by Stellar Tools`;
 

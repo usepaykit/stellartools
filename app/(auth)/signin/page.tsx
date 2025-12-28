@@ -1,73 +1,97 @@
 "use client";
 
-import React from "react";
+import * as React from "react";
 
+import { accountValidator } from "@/actions/auth";
+import { Google } from "@/components/icon";
+import { TextField } from "@/components/input-picker";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
-const updatePasswordSchema = z
-  .object({
-    newPassword: z
-      .string()
-      .min(1, "New password is required")
-      .min(8, "New password must be at least 8 characters"),
-    confirmPassword: z.string().min(1, "Please confirm your new password"),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
+const signInSchema = z.object({
+  email: z.email().toLowerCase(),
+  password: z.string().min(1, "Password is required"),
+  rememberMe: z.boolean(),
+});
+
+type SignInFormData = z.infer<typeof signInSchema>;
+
+export default function SignIn() {
+  const [showPassword, setShowPassword] = React.useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const redirect = searchParams.get("redirect") ?? "/dashboard";
+
+  const signinMutation = useMutation({
+    mutationFn: async (data: { email: string; password: string }) => {
+      return await accountValidator(
+        data.email,
+        {
+          provider: "local",
+          sub: data.password,
+        },
+        "SIGN_IN",
+        undefined,
+        { intent: "SIGN_IN" }
+      );
+    },
+    onSuccess: () => {
+      toast.success("Logged in successfully");
+      router.push("/select-organization");
+    },
+    onError: (error: Error) => {
+      toast.error("Sign-in failed", {
+        id: "signin-err",
+        description: error.message,
+      });
+    },
   });
-
-type UpdatePasswordFormData = z.infer<typeof updatePasswordSchema>;
-
-export default function UpdatePassword() {
-  const [showNewPassword, setShowNewPassword] = React.useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
-
-  const form = useForm<UpdatePasswordFormData>({
-    resolver: zodResolver(updatePasswordSchema),
+  const form = useForm<SignInFormData>({
+    resolver: zodResolver(signInSchema),
     defaultValues: {
-      newPassword: "",
-      confirmPassword: "",
+      email: "",
+      password: "",
+      rememberMe: false,
     },
   });
 
-  const onSubmit = async (data: UpdatePasswordFormData) => {
-    setIsSubmitting(true);
-    console.log(data);
-
-    try {
-      console.log("Password update request:", {
-        timestamp: new Date().toISOString(),
-      });
-      toast.success("Password updated successfully", {
-        description: "Your password has been changed successfully.",
-      } as Parameters<typeof toast.success>[1]);
-    } catch (error) {
-      console.error("Password update error:", error);
-      toast.error("Failed to update password", {
-        description:
-          error instanceof Error
-            ? error.message
-            : "Unable to update password. Please try again.",
-      } as Parameters<typeof toast.error>[1]);
-    } finally {
-      setIsSubmitting(false);
-    }
+  const onSubmit = async (data: SignInFormData) => {
+    signinMutation.mutate(data);
   };
+
+  const handleGoogleSignIn = React.useCallback(async () => {
+    const authUrlDomain = "https://accounts.google.com/o/oauth2/v2/auth";
+
+    const authUrlParams = {
+      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+      redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/verify-callback`,
+      response_type: "code",
+      scope: "openid profile email",
+      access_type: "offline",
+      prompt: "consent",
+      state: btoa(JSON.stringify({ intent: "SIGN_IN", redirect })),
+    };
+
+    const authUrl = `${authUrlDomain}?${new URLSearchParams(authUrlParams as Record<string, string>)}`;
+    router.push(authUrl);
+  }, [router, redirect]);
 
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
@@ -134,8 +158,8 @@ export default function UpdatePassword() {
               </div>
             </div>
           </div>
-
           <div className="relative">
+            {/* Subtle border accent */}
             <div className="absolute -top-px right-0 left-0 h-px bg-linear-to-r from-transparent via-white/10 to-transparent" />
 
             <div className="space-y-4 pt-8">
@@ -160,134 +184,166 @@ export default function UpdatePassword() {
         >
           <div className="w-full space-y-2 text-center">
             <h2 className="f text-3xl tracking-tighter">
-              Update your password
+              Sign in to your account
             </h2>
-            <p className="text-muted-foreground text-sm">
-              Choose a new password for your account.
-            </p>
-          </div>
-
-          <div className="w-full space-y-2">
-            <Label htmlFor="newPassword" className="text-sm font-semibold">
-              New Password
-            </Label>
-            <Controller
-              control={form.control}
-              name="newPassword"
-              render={({ field, fieldState: { error } }) => (
-                <div className="space-y-1.5">
-                  <InputGroup
-                    className="w-full shadow-none"
-                    aria-invalid={error ? "true" : "false"}
-                  >
-                    <InputGroupInput
-                      {...field}
-                      id="newPassword"
-                      type={showNewPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      className="shadow-none"
-                    />
-                    <InputGroupAddon align="inline-end">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 shadow-none hover:bg-transparent"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        aria-label={
-                          showNewPassword ? "Hide password" : "Show password"
-                        }
-                      >
-                        {showNewPassword ? (
-                          <EyeOff className="text-muted-foreground h-4 w-4" />
-                        ) : (
-                          <Eye className="text-muted-foreground h-4 w-4" />
-                        )}
-                      </Button>
-                    </InputGroupAddon>
-                  </InputGroup>
-                  {error?.message && (
-                    <p className="text-destructive text-sm">{error.message}</p>
-                  )}
-                </div>
-              )}
-            />
-          </div>
-
-          <div className="w-full space-y-2">
-            <Label htmlFor="confirmPassword" className="text-sm font-semibold">
-              Confirm New Password
-            </Label>
-            <Controller
-              control={form.control}
-              name="confirmPassword"
-              render={({ field, fieldState: { error } }) => (
-                <div className="space-y-1.5">
-                  <InputGroup
-                    className="w-full shadow-none"
-                    aria-invalid={error ? "true" : "false"}
-                  >
-                    <InputGroupInput
-                      {...field}
-                      id="confirmPassword"
-                      type={showConfirmPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      className="shadow-none"
-                    />
-                    <InputGroupAddon align="inline-end">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 shadow-none hover:bg-transparent"
-                        onClick={() =>
-                          setShowConfirmPassword(!showConfirmPassword)
-                        }
-                        aria-label={
-                          showConfirmPassword
-                            ? "Hide password"
-                            : "Show password"
-                        }
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOff className="text-muted-foreground h-4 w-4" />
-                        ) : (
-                          <Eye className="text-muted-foreground h-4 w-4" />
-                        )}
-                      </Button>
-                    </InputGroupAddon>
-                  </InputGroup>
-                  {error?.message && (
-                    <p className="text-destructive text-sm">{error.message}</p>
-                  )}
-                </div>
-              )}
-            />
           </div>
 
           <Button
+            type="button"
+            variant="ghost"
+            onClick={handleGoogleSignIn}
+            className="hover:bg-muted flex w-full cursor-pointer items-center gap-2.5 rounded-lg border px-10 py-2.5 shadow-none transition-colors"
+            disabled={signinMutation.isPending}
+          >
+            <Google className="h-5 w-5" />
+            <span className="text-foreground text-sm font-semibold">
+              Continue with Google
+            </span>
+          </Button>
+
+          <div className="my-6 flex w-full items-center">
+            <Separator className="flex-1" />
+            <span className="text-muted-foreground px-4 text-sm whitespace-nowrap">
+              or continue with email
+            </span>
+            <Separator className="flex-1" />
+          </div>
+
+          <div className="w-full">
+            <Controller
+              control={form.control}
+              name="email"
+              render={({ field, fieldState: { error } }) => (
+                <TextField
+                  {...field}
+                  id="email"
+                  label="Email"
+                  placeholder="name@example.com"
+                  className="w-full shadow-none"
+                  error={error?.message}
+                />
+              )}
+            />
+          </div>
+
+          <div className="w-full space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password" className="text-sm font-semibold">
+                Password
+              </Label>
+              <Link
+                href="/forgot-password"
+                className="hover:text-foreground text-sm font-semibold underline transition-colors"
+              >
+                Forgot password?
+              </Link>
+            </div>
+            <Controller
+              control={form.control}
+              name="password"
+              render={({ field, fieldState: { error } }) => (
+                <div className="space-y-1.5">
+                  <InputGroup
+                    className="w-full shadow-none"
+                    aria-invalid={error ? "true" : "false"}
+                  >
+                    <InputGroupInput
+                      {...field}
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      className="shadow-none"
+                    />
+                    <InputGroupAddon align="inline-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 shadow-none hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={
+                          showPassword ? "Hide password" : "Show password"
+                        }
+                      >
+                        {showPassword ? (
+                          <EyeOff className="text-muted-foreground h-4 w-4" />
+                        ) : (
+                          <Eye className="text-muted-foreground h-4 w-4" />
+                        )}
+                      </Button>
+                    </InputGroupAddon>
+                  </InputGroup>
+                  {error?.message && (
+                    <p className="text-destructive text-sm">{error.message}</p>
+                  )}
+                </div>
+              )}
+            />
+          </div>
+
+          <div className="w-full">
+            <Controller
+              control={form.control}
+              name="rememberMe"
+              render={({ field }) => (
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="remember-me"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                  <Label
+                    htmlFor="remember-me"
+                    className="cursor-pointer text-sm font-semibold"
+                  >
+                    Remember me
+                  </Label>
+                </div>
+              )}
+            />
+          </div>
+          <Button
             type="submit"
             className="w-full rounded-md font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg focus:ring-4"
-            disabled={isSubmitting}
+            disabled={signinMutation.isPending}
           >
-            {isSubmitting ? (
+            {signinMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Updating password...
+                Signing in...
               </>
             ) : (
-              "Update password"
+              "Sign in"
             )}
           </Button>
 
           <div className="my-6 w-full">
             <p className="text-muted-foreground text-center text-sm">
-              Remember your password?{" "}
+              By continuing you agree to our{" "}
               <Link
-                href="/auth/signin"
+                href="/terms"
+                className="hover:text-foreground underline transition-colors"
+              >
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link
+                href="/privacy"
+                className="hover:text-foreground underline transition-colors"
+              >
+                Privacy Policy
+              </Link>
+            </p>
+          </div>
+
+          <div className="w-full text-center">
+            <p className="text-muted-foreground text-sm">
+              Don&’t have an account?{" "}
+              <Link
+                href="/signup"
                 className="hover:text-foreground font-semibold underline transition-colors"
               >
-                Sign in
+                Sign up
               </Link>
             </p>
           </div>

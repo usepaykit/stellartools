@@ -2,8 +2,7 @@
 
 import React from "react";
 
-import { Google } from "@/components/icon";
-import { TextField } from "@/components/input-picker";
+import { resetPassword } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -11,81 +10,72 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
-const signUpSchema = z.object({
-  name: z
-    .string()
-    .min(1, "Name is required")
-    .min(3, "Name must be at least 3 characters"),
-  email: z.email(),
-  password: z
-    .string()
-    .min(1, "Password is required")
-    .min(8, "Password must be at least 8 characters"),
-});
+const updatePasswordSchema = z
+  .object({
+    newPassword: z
+      .string()
+      .min(1, "New password is required")
+      .min(8, "New password must be at least 8 characters"),
+    confirmPassword: z.string().min(1, "Please confirm your new password"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
-type SignUpFormData = z.infer<typeof signUpSchema>;
+type UpdatePasswordFormData = z.infer<typeof updatePasswordSchema>;
 
-export default function SignUp() {
-  const [showPassword, setShowPassword] = React.useState(false);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+export default function UpdatePassword() {
+  const [showNewPassword, setShowNewPassword] = React.useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
 
-  const form = useForm<SignUpFormData>({
-    resolver: zodResolver(signUpSchema),
+  const form = useForm<UpdatePasswordFormData>({
+    resolver: zodResolver(updatePasswordSchema),
     defaultValues: {
-      name: "",
-      email: "",
-      password: "",
+      newPassword: "",
+      confirmPassword: "",
     },
   });
 
-  const onSubmit = async (data: SignUpFormData) => {
-    setIsSubmitting(true);
-
-    try {
-      console.log("Sign-up attempt:", {
-        name: data.name,
-        email: data.email,
-        timestamp: new Date().toISOString(),
+  const onSubmit = async (data: UpdatePasswordFormData) => {
+    if (!token) {
+      toast.error("Invalid reset link", {
+        id: "invalid-reset-link",
+        description: "The password reset link is invalid or expired.",
       });
-      toast.success("Account created successfully");
-    } catch (error) {
-      console.error("Sign-up error:", error);
-      toast.error("Sign-up failed", {
-        description:
-          error instanceof Error
-            ? error.message
-            : "Unable to create account. Please try again.",
-      } as Parameters<typeof toast.error>[1]);
-    } finally {
-      setIsSubmitting(false);
+      return;
     }
-  };
 
-  const handleGoogleSignUp = async () => {
     try {
-      console.log("Google sign-up initiated");
-      toast.info("Google sign-up", {
-        description: "Redirecting to Google authentication...",
-      } as Parameters<typeof toast.info>[1]);
-    } catch (error) {
-      console.error("Google sign-up error:", error);
-      toast.error("Google sign-up failed");
+      await resetPassword(token, data.newPassword);
+      toast.success("Password updated successfully", {
+        id: "password-updated-successfully",
+        description: "Your password has been changed successfully.",
+      });
+      router.push("/signin");
+    } catch {
+      toast.error("Failed to update password", {
+        id: "failed-to-update-password",
+        description: "Unable to update password. Please try again.",
+      });
     }
   };
 
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
       <div className="relative hidden overflow-hidden bg-black lg:flex">
-        {/* Sophisticated gradient mesh background */}
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-linear-to-br from-black via-gray-950 to-black" />
           <div className="bg-primary/5 absolute top-0 right-0 h-1/2 w-1/2 blur-3xl" />
@@ -93,14 +83,10 @@ export default function SignUp() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(120,119,198,0.1),transparent_50%)]" />
         </div>
 
-        {/* Content Container with refined spacing */}
         <div className="relative z-10 flex w-full flex-col justify-between p-16">
-          {/* Top Section */}
           <div className="space-y-10">
-            {/* Logo Section - Premium presentation */}
             <div className="space-y-6">
               <div className="relative inline-block">
-                {/* Subtle glow - not overpowering */}
                 <div className="bg-primary/5 absolute -inset-4 rounded-2xl opacity-50 blur-2xl" />
                 <Image
                   src="/images/logo-dark.png"
@@ -112,7 +98,6 @@ export default function SignUp() {
                 />
               </div>
 
-              {/* Typography with refined hierarchy */}
               <div className="space-y-3">
                 <h1 className="text-6xl leading-[1.1] font-bold tracking-[-0.02em] text-white">
                   Stellar Tools
@@ -121,14 +106,12 @@ export default function SignUp() {
               </div>
             </div>
 
-            {/* Value Proposition - Concise and impactful */}
             <div className="max-w-lg space-y-6">
               <p className="text-lg leading-relaxed font-light tracking-wide text-white/80">
                 The cloud platform for managing Stellar payment SDKs.
                 Centralized control with enterprise reliability.
               </p>
 
-              {/* Feature highlights - Minimal and elegant */}
               <div className="flex flex-col gap-4 pt-2">
                 <div className="group flex items-start gap-4">
                   <div>
@@ -156,9 +139,7 @@ export default function SignUp() {
             </div>
           </div>
 
-          {/* Bottom Section - Refined feature showcase */}
           <div className="relative">
-            {/* Subtle border accent */}
             <div className="absolute -top-px right-0 left-0 h-px bg-linear-to-r from-transparent via-white/10 to-transparent" />
 
             <div className="space-y-4 pt-8">
@@ -176,78 +157,33 @@ export default function SignUp() {
         </div>
       </div>
 
-      {/* Right side form */}
       <div className="bg-background relative flex flex-col justify-center">
         <form
           onSubmit={form.handleSubmit(onSubmit)}
           className="mx-auto flex w-full max-w-md flex-col items-center justify-center space-y-4 px-6 py-12"
         >
           <div className="w-full space-y-2 text-center">
-            <h2 className="f text-3xl tracking-tighter">Create your account</h2>
-          </div>
-
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={handleGoogleSignUp}
-            className="hover:bg-muted flex w-full items-center gap-2.5 rounded-lg border px-10 py-2.5 shadow-none transition-colors"
-          >
-            <Google className="h-5 w-5" />
-            <span className="text-foreground text-sm font-semibold">
-              Continue with Google
-            </span>
-          </Button>
-
-          <div className="my-6 flex w-full items-center">
-            <Separator className="flex-1" />
-            <span className="text-muted-foreground px-4 text-sm whitespace-nowrap">
-              or continue with email
-            </span>
-            <Separator className="flex-1" />
-          </div>
-
-          <div className="w-full">
-            <Controller
-              control={form.control}
-              name="name"
-              render={({ field, fieldState: { error } }) => (
-                <TextField
-                  {...field}
-                  id="name"
-                  label="Name"
-                  type="text"
-                  placeholder="John Doe"
-                  className="w-full shadow-none"
-                  error={error?.message}
-                />
-              )}
-            />
-          </div>
-
-          <div className="w-full">
-            <Controller
-              control={form.control}
-              name="email"
-              render={({ field, fieldState: { error } }) => (
-                <TextField
-                  {...field}
-                  id="email"
-                  label="Email"
-                  placeholder="name@example.com"
-                  className="w-full shadow-none"
-                  error={error?.message}
-                />
-              )}
-            />
+            <h2 className="f text-3xl tracking-tighter">
+              Update your password
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              Choose a new password for your account.
+            </p>
+            {!token && (
+              <p className="text-destructive mt-2 text-sm">
+                Invalid or missing reset token. Please request a new password
+                reset link.
+              </p>
+            )}
           </div>
 
           <div className="w-full space-y-2">
-            <Label htmlFor="password" className="text-sm font-semibold">
-              Password
+            <Label htmlFor="newPassword" className="text-sm font-semibold">
+              New Password
             </Label>
             <Controller
               control={form.control}
-              name="password"
+              name="newPassword"
               render={({ field, fieldState: { error } }) => (
                 <div className="space-y-1.5">
                   <InputGroup
@@ -256,8 +192,8 @@ export default function SignUp() {
                   >
                     <InputGroupInput
                       {...field}
-                      id="password"
-                      type={showPassword ? "text" : "password"}
+                      id="newPassword"
+                      type={showNewPassword ? "text" : "password"}
                       placeholder="••••••••"
                       className="shadow-none"
                     />
@@ -267,12 +203,12 @@ export default function SignUp() {
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6 shadow-none hover:bg-transparent"
-                        onClick={() => setShowPassword(!showPassword)}
+                        onClick={() => setShowNewPassword(!showNewPassword)}
                         aria-label={
-                          showPassword ? "Hide password" : "Show password"
+                          showNewPassword ? "Hide password" : "Show password"
                         }
                       >
-                        {showPassword ? (
+                        {showNewPassword ? (
                           <EyeOff className="text-muted-foreground h-4 w-4" />
                         ) : (
                           <Eye className="text-muted-foreground h-4 w-4" />
@@ -288,47 +224,77 @@ export default function SignUp() {
             />
           </div>
 
-          {/* Submit Button */}
+          <div className="w-full space-y-2">
+            <Label htmlFor="confirmPassword" className="text-sm font-semibold">
+              Confirm New Password
+            </Label>
+            <Controller
+              control={form.control}
+              name="confirmPassword"
+              render={({ field, fieldState: { error } }) => (
+                <div className="space-y-1.5">
+                  <InputGroup
+                    className="w-full shadow-none"
+                    aria-invalid={error ? "true" : "false"}
+                  >
+                    <InputGroupInput
+                      {...field}
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      className="shadow-none"
+                    />
+                    <InputGroupAddon align="inline-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 shadow-none hover:bg-transparent"
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        aria-label={
+                          showConfirmPassword
+                            ? "Hide password"
+                            : "Show password"
+                        }
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="text-muted-foreground h-4 w-4" />
+                        ) : (
+                          <Eye className="text-muted-foreground h-4 w-4" />
+                        )}
+                      </Button>
+                    </InputGroupAddon>
+                  </InputGroup>
+                  {error?.message && (
+                    <p className="text-destructive text-sm">{error.message}</p>
+                  )}
+                </div>
+              )}
+            />
+          </div>
+
           <Button
             type="submit"
             className="w-full rounded-md font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg focus:ring-4"
-            disabled={isSubmitting}
+            disabled={form.formState.isSubmitting || !token}
           >
-            {isSubmitting ? (
+            {form.formState.isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating account...
+                Updating password...
               </>
             ) : (
-              "Sign up"
+              "Update password"
             )}
           </Button>
 
           <div className="my-6 w-full">
             <p className="text-muted-foreground text-center text-sm">
-              By continuing you agree to our{" "}
+              Remember your password?{" "}
               <Link
-                href="/terms"
-                className="hover:text-foreground underline transition-colors"
-              >
-                Terms of Service
-              </Link>{" "}
-              and{" "}
-              <Link
-                href="/privacy"
-                className="hover:text-foreground underline transition-colors"
-              >
-                Privacy Policy
-              </Link>
-            </p>
-          </div>
-
-          {/* Sign In Link */}
-          <div className="w-full text-center">
-            <p className="text-muted-foreground text-sm">
-              Already have an account?{" "}
-              <Link
-                href="/auth/signin"
+                href="/signin"
                 className="hover:text-foreground font-semibold underline transition-colors"
               >
                 Sign in

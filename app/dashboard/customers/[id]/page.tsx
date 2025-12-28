@@ -2,11 +2,15 @@
 
 import * as React from "react";
 
+import { retrieveCustomer } from "@/actions/customers";
+import { retrievePayments } from "@/actions/payment";
 import { CustomerModal } from "@/app/dashboard/customers/page";
 import { RefundModal } from "@/app/dashboard/transactions/page";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import { DataTable, TableAction } from "@/components/data-table";
+import { FullScreenModal } from "@/components/fullscreen-modal";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -17,26 +21,19 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { toast } from "@/components/ui/toast";
+import { Payment } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { ColumnDef } from "@tanstack/react-table";
 import {
   CheckCircle2,
   ChevronRight,
@@ -53,177 +50,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
-type WalletAddress = {
-  id: string;
-  address: string;
-  memo?: string;
-};
-
-type Customer = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  walletAddresses: WalletAddress[];
-  createdAt: Date;
-  businessName?: string;
-  metadata?: Record<string, string>;
-};
-
-type Payment = {
-  id: string;
-  amount: number;
-  currency: string;
-  description: string;
-  status: "succeeded" | "pending" | "failed";
-  date: Date;
-  transactionHash?: string;
-};
-
-const getCustomerById = (id: string): Customer | null => {
-  const customers: Customer[] = [
-    {
-      id: "1",
-      name: "Manan Trivedi",
-      email: "manan@bricxlabs.com",
-      phone: "+1 234-567-8900",
-      walletAddresses: [
-        {
-          id: "wallet_1_1",
-          address: "GABCDEFGHIJKLMNOPQRSTUVWXYZ12345678901234567890",
-          memo: "Primary wallet",
-        },
-        {
-          id: "wallet_1_2",
-          address: "G9876543210ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
-          memo: "Secondary wallet",
-        },
-      ],
-      createdAt: new Date("2024-12-18T14:56:00"),
-      metadata: {
-        company: "BricxLabs",
-        industry: "Technology",
-        source: "Website",
-      },
-    },
-    {
-      id: "2",
-      name: "Kevin Isaac",
-      email: "aravind@zephony.com",
-      phone: "+1 234-567-8901",
-      walletAddresses: [
-        {
-          id: "wallet_2_1",
-          address: "GZYXWVUTSRQPONMLKJIHGFEDCBA98765432109876543210",
-          memo: "Main account",
-        },
-        {
-          id: "wallet_2_2",
-          address: "G1234567890ZYXWVUTSRQPONMLKJIHGFEDCBA9876543210",
-          memo: "Backup account",
-        },
-      ],
-      createdAt: new Date("2024-12-18T12:46:00"),
-    },
-    {
-      id: "3",
-      name: "Dilara Cossette",
-      email: "dilara@fip.agency",
-      phone: "+1 234-567-8902",
-      walletAddresses: [
-        {
-          id: "wallet_3_1",
-          address: "G1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
-          memo: "Primary",
-        },
-        {
-          id: "wallet_3_2",
-          address: "GABCDEFGHIJKLMNOPQRSTUVWXYZ98765432109876543210",
-          memo: "Secondary",
-        },
-      ],
-      createdAt: new Date("2024-12-18T08:04:00"),
-    },
-    {
-      id: "4",
-      name: "Rhys McCormack",
-      email: "rhysmccormack.business@gmail.com",
-      phone: "+1 234-567-8903",
-      walletAddresses: [
-        {
-          id: "wallet_4_1",
-          address: "G9876543210ZYXWVUTSRQPONMLKJIHGFEDCBA9876543210",
-          memo: "Business wallet",
-        },
-        {
-          id: "wallet_4_2",
-          address: "GABCD1234567890EFGHIJKLMNOPQRSTUVWXYZ1234567890",
-          memo: "Personal wallet",
-        },
-      ],
-      createdAt: new Date("2024-12-18T06:48:00"),
-    },
-    {
-      id: "5",
-      name: "Sebastian Galvez",
-      email: "Alejandro@leadrsglobal.com",
-      phone: "+1 234-567-8904",
-      walletAddresses: [
-        {
-          id: "wallet_5_1",
-          address: "GABCD1234567890EFGHIJKLMNOPQRSTUVWXYZ1234567890",
-          memo: "Primary",
-        },
-        {
-          id: "wallet_5_2",
-          address: "GZYXWVUTSRQPONMLKJIHGFEDCBA12345678901234567890",
-          memo: "Secondary",
-        },
-      ],
-      createdAt: new Date("2024-12-18T05:25:00"),
-    },
-  ];
-  return customers.find((c) => c.id === id) || null;
-};
-
-const getPaymentsByCustomerId = (_customerId: string): Payment[] => {
-  return [
-    {
-      id: "pay_1",
-      amount: 3.0,
-      currency: "USD",
-      description: "tx_3SfRwtSF0MtsiMvy1KvFb53g",
-      status: "succeeded",
-      date: new Date("2024-12-18T02:38:00"),
-      transactionHash: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6",
-    },
-    {
-      id: "pay_2",
-      amount: 150.0,
-      currency: "USD",
-      description: "Monthly subscription payment",
-      status: "succeeded",
-      date: new Date("2024-12-15T10:20:00"),
-      transactionHash: "b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7",
-    },
-    {
-      id: "pay_3",
-      amount: 50.0,
-      currency: "USD",
-      description: "One-time payment",
-      status: "pending",
-      date: new Date("2024-12-17T14:15:00"),
-    },
-  ];
-};
-
 const StatusBadge = ({ status }: { status: Payment["status"] }) => {
   const variants = {
-    succeeded: {
+    confirmed: {
       className:
         "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
       icon: CheckCircle2,
-      label: "Succeeded",
+      label: "Confirmed",
     },
     pending: {
       className:
@@ -271,15 +104,63 @@ const CopyButton = ({ text, label }: { text: string; label?: string }) => {
   );
 };
 
+// Payment columns definition
+const paymentColumns: ColumnDef<Payment>[] = [
+  {
+    accessorKey: "amount",
+    header: "Amount",
+    cell: ({ row }) => (
+      <div className="flex items-center gap-2">
+        <span className="font-medium">
+          {new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "xlm",
+          }).format(row.original.amount)}
+        </span>
+      </div>
+    ),
+  },
+  {
+    accessorKey: "checkoutId",
+    header: "Description",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground font-mono text-sm">
+        {row.original.checkoutId}
+      </span>
+    ),
+  },
+  {
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => (
+      <StatusBadge status={row.original.status as Payment["status"]} />
+    ),
+  },
+  {
+    accessorKey: "createdAt",
+    header: "Date",
+    cell: ({ row }) => (
+      <div className="text-muted-foreground">
+        {row.original.createdAt.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        })}{" "}
+        {row.original.createdAt.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        })}
+      </div>
+    ),
+  },
+];
+
 export default function CustomerDetailPage() {
   const router = useRouter();
   const params = useParams();
   const customerId = params?.id as string;
-  const customer = getCustomerById(customerId);
-  const payments = getPaymentsByCustomerId(customerId);
-  const [selectedPayments, setSelectedPayments] = React.useState<Set<string>>(
-    new Set()
-  );
+  // const customer = getCustomerById(customerId);
+
   const [hiddenWallets, setHiddenWallets] = React.useState<Set<string>>(
     new Set()
   );
@@ -288,19 +169,18 @@ export default function CustomerDetailPage() {
     string | null
   >(null);
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
-  const handleSelectAll = (checked: boolean) => {
-    setSelectedPayments(
-      checked ? new Set(payments.map((p) => p.id)) : new Set()
-    );
-  };
+  const { data: payments, isLoading: isLoadingPayments } = useQuery({
+    queryKey: ["payments", customerId],
+    queryFn: () => retrievePayments(undefined, { customerId }, undefined),
+  });
 
-  const handleSelectPayment = (paymentId: string, checked: boolean) => {
-    const newSelected = new Set(selectedPayments);
-    if (checked) newSelected.add(paymentId);
-    else newSelected.delete(paymentId);
-    setSelectedPayments(newSelected);
-  };
+  const { data: customer, isLoading: _customerLoading } = useQuery({
+    queryKey: ["customer", customerId],
+    queryFn: () => retrieveCustomer(customerId),
+  });
 
   const handleToggleWalletVisibility = (walletId: string) => {
     const newHidden = new Set(hiddenWallets);
@@ -309,8 +189,55 @@ export default function CustomerDetailPage() {
     setHiddenWallets(newHidden);
   };
 
-  const isAllSelected =
-    payments.length > 0 && selectedPayments.size === payments.length;
+  const handleDeleteCustomer = async () => {
+    setIsDeleting(true);
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      toast.success("Customer deleted successfully");
+      setIsDeleteModalOpen(false);
+      router.push("/dashboard/customers");
+    } catch (error) {
+      console.error("Failed to delete customer:", error);
+      toast.error("Failed to delete customer", {
+        description: "Please try again later",
+      } as Parameters<typeof toast.error>[1]);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const paymentActions: TableAction<Payment>[] = React.useMemo(
+    () => [
+      {
+        label: "Refund payment",
+        onClick: (payment: Payment) => {
+          setSelectedPaymentId(payment.id);
+          setIsRefundModalOpen(true);
+        },
+      },
+      {
+        label: "Send receipt",
+        onClick: (payment: Payment) => {
+          console.log("Send receipt:", payment.id);
+        },
+      },
+      {
+        label: "Copy payment ID",
+        onClick: (payment: Payment) => {
+          navigator.clipboard.writeText(payment.id);
+          toast.success("Payment ID copied to clipboard");
+        },
+      },
+      {
+        label: "View payment details",
+        onClick: (payment: Payment) => {
+          console.log("View payment details:", payment.id);
+        },
+      },
+    ],
+    []
+  );
 
   if (!customer) {
     return (
@@ -321,7 +248,7 @@ export default function CustomerDetailPage() {
               <div className="py-12 text-center">
                 <h1 className="mb-2 text-2xl font-bold">Customer not found</h1>
                 <p className="text-muted-foreground mb-4">
-                  The customer you&apos;re looking for doesn&apos;t exist.
+                  The customer you&’re looking for doesn&’t exist.
                 </p>
                 <Button onClick={() => router.push("/dashboard/customers")}>
                   Back to Customers
@@ -335,8 +262,8 @@ export default function CustomerDetailPage() {
   }
 
   const totalSpent = payments
-    .filter((p) => p.status === "succeeded")
-    .reduce((sum, p) => sum + p.amount, 0);
+    ?.filter((p) => p.status === "confirmed")
+    .reduce((sum, p) => sum + (p.amount ?? 0), 0);
 
   const isNewCustomer =
     new Date().getTime() - customer.createdAt.getTime() <
@@ -347,7 +274,6 @@ export default function CustomerDetailPage() {
       <DashboardSidebar>
         <DashboardSidebarInset>
           <div className="flex flex-col gap-6 p-4 sm:p-6">
-            {/* Breadcrumbs */}
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem>
@@ -364,7 +290,6 @@ export default function CustomerDetailPage() {
               </BreadcrumbList>
             </Breadcrumb>
 
-            {/* Header Section */}
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex flex-col gap-2">
@@ -404,7 +329,7 @@ export default function CustomerDetailPage() {
                       <Button
                         variant="outline"
                         size="icon"
-                        className="w-full shadow-none sm:w-auto"
+                        className="size-8 cursor-pointer shadow-none"
                       >
                         <MoreHorizontal className="h-4 w-4" />
                         <span className="sr-only">More options</span>
@@ -416,8 +341,20 @@ export default function CustomerDetailPage() {
                       >
                         Edit customer
                       </DropdownMenuItem>
-                      <DropdownMenuItem>View transactions</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive">
+                      <DropdownMenuItem
+                        onClick={() =>
+                          router.push(
+                            `/dashboard/transactions?customerId=${customerId}`
+                          )
+                        }
+                      >
+                        {" "}
+                        View transactions
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => setIsDeleteModalOpen(true)}
+                      >
                         Delete customer
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -426,190 +363,18 @@ export default function CustomerDetailPage() {
               </div>
             </div>
 
-            {/* Main Content */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-              {/* Left Column - Main Content */}
               <div className="space-y-6 lg:col-span-2">
-                {/* Payments Section */}
                 <div className="space-y-3">
                   <h3 className="text-lg font-semibold sm:text-xl">Payments</h3>
-                  {payments.length === 0 ? (
-                    <div className="py-8 text-center">
-                      <p className="text-muted-foreground mb-4">
-                        This customer doesn&apos;t have any chargeable payment
-                        sources on file. Add a source or payment method to
-                        create a new payment.
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="-mx-4 overflow-x-auto sm:mx-0">
-                        <div className="inline-block min-w-full px-4 align-middle sm:px-0">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead className="w-[50px]">
-                                  <Checkbox
-                                    checked={isAllSelected}
-                                    onCheckedChange={handleSelectAll}
-                                    aria-label="Select all"
-                                    className="translate-y-[2px]"
-                                  />
-                                </TableHead>
-                                <TableHead className="font-semibold">
-                                  Amount
-                                </TableHead>
-                                <TableHead className="hidden font-semibold sm:table-cell">
-                                  Description
-                                </TableHead>
-                                <TableHead className="font-semibold">
-                                  Status
-                                </TableHead>
-                                <TableHead className="hidden font-semibold md:table-cell">
-                                  Date
-                                </TableHead>
-                                <TableHead className="w-[50px]"></TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {payments.map((payment) => (
-                                <TableRow key={payment.id}>
-                                  <TableCell>
-                                    <Checkbox
-                                      checked={selectedPayments.has(payment.id)}
-                                      onCheckedChange={(checked) =>
-                                        handleSelectPayment(
-                                          payment.id,
-                                          !!checked
-                                        )
-                                      }
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                      }}
-                                      aria-label="Select row"
-                                      className="translate-y-[2px]"
-                                    />
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-medium">
-                                        {new Intl.NumberFormat("en-US", {
-                                          style: "currency",
-                                          currency: "xlm",
-                                        }).format(payment.amount)}
-                                      </span>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="hidden sm:table-cell">
-                                    <span className="text-muted-foreground font-mono text-sm">
-                                      {payment.description}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell>
-                                    <StatusBadge status={payment.status} />
-                                  </TableCell>
-                                  <TableCell className="hidden md:table-cell">
-                                    <div className="text-muted-foreground">
-                                      {payment.date.toLocaleDateString(
-                                        "en-US",
-                                        {
-                                          month: "short",
-                                          day: "numeric",
-                                        }
-                                      )}{" "}
-                                      {payment.date.toLocaleTimeString(
-                                        "en-US",
-                                        {
-                                          hour: "numeric",
-                                          minute: "2-digit",
-                                          hour12: true,
-                                        }
-                                      )}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex justify-end">
-                                      <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon-sm"
-                                            className="size-8"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                            }}
-                                          >
-                                            <MoreHorizontal className="size-4" />
-                                            <span className="sr-only">
-                                              Open menu
-                                            </span>
-                                          </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                          <DropdownMenuLabel>
-                                            Actions
-                                          </DropdownMenuLabel>
-                                          <DropdownMenuItem
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setSelectedPaymentId(payment.id);
-                                              setIsRefundModalOpen(true);
-                                            }}
-                                          >
-                                            Refund payment
-                                          </DropdownMenuItem>
-                                          <DropdownMenuItem
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              console.log(
-                                                "Send receipt:",
-                                                payment.id
-                                              );
-                                            }}
-                                          >
-                                            Send receipt
-                                          </DropdownMenuItem>
-                                          <DropdownMenuItem
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              navigator.clipboard.writeText(
-                                                payment.id
-                                              );
-                                            }}
-                                          >
-                                            Copy payment ID
-                                          </DropdownMenuItem>
-                                          <DropdownMenuSeparator />
-                                          <DropdownMenuLabel>
-                                            Connections
-                                          </DropdownMenuLabel>
-                                          <DropdownMenuItem
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              console.log(
-                                                "View payment details:",
-                                                payment.id
-                                              );
-                                            }}
-                                          >
-                                            View payment details
-                                          </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                      </DropdownMenu>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      </div>
-                      <div className="text-primary mt-4 px-4 text-sm sm:px-0">
-                        {payments.length} result
-                        {payments.length !== 1 ? "s" : ""}
-                      </div>
-                    </>
-                  )}
+                  <DataTable
+                    columns={paymentColumns}
+                    data={payments ?? []}
+                    enableBulkSelect={false}
+                    actions={paymentActions}
+                    isLoading={isLoadingPayments}
+                    skeletonRowCount={3}
+                  />
                 </div>
 
                 {/* Wallet Address Section */}
@@ -626,11 +391,11 @@ export default function CustomerDetailPage() {
                   {customer.walletAddresses &&
                   customer.walletAddresses.length > 0 ? (
                     <div className="space-y-3">
-                      {customer.walletAddresses.map((wallet) => {
-                        const isHidden = hiddenWallets.has(wallet.id);
+                      {customer.walletAddresses.map(({ address, memo }) => {
+                        const isHidden = hiddenWallets.has(address);
                         return (
                           <div
-                            key={wallet.id}
+                            key={address}
                             className="bg-muted/50 flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center"
                           >
                             <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -643,11 +408,13 @@ export default function CustomerDetailPage() {
                               />
                               <div className="min-w-0 flex-1">
                                 <div className="font-mono text-xs break-all sm:text-sm">
-                                  {isHidden ? "•".repeat(20) : wallet.address}
+                                  {isHidden ? "•".repeat(20) : address}
                                 </div>
-                                <div className="text-muted-foreground mt-1 text-xs">
-                                  {wallet.memo || "memo"}
-                                </div>
+                                {memo && (
+                                  <div className="text-muted-foreground mt-1 text-xs">
+                                    {memo}
+                                  </div>
+                                )}
                               </div>
                             </div>
                             <div className="flex shrink-0 items-center gap-2 sm:self-center">
@@ -656,7 +423,7 @@ export default function CustomerDetailPage() {
                                 size="icon-sm"
                                 className="h-8 w-8"
                                 onClick={() =>
-                                  handleToggleWalletVisibility(wallet.id)
+                                  handleToggleWalletVisibility(address)
                                 }
                                 aria-label={
                                   isHidden
@@ -671,7 +438,7 @@ export default function CustomerDetailPage() {
                                 )}
                               </Button>
                               <CopyButton
-                                text={wallet.address}
+                                text={address}
                                 label="Copy wallet address"
                               />
                             </div>
@@ -699,7 +466,7 @@ export default function CustomerDetailPage() {
                           {new Intl.NumberFormat("en-US", {
                             style: "currency",
                             currency: "USD",
-                          }).format(totalSpent)}
+                          }).format(totalSpent ?? 0)}
                         </div>
                         <div className="text-muted-foreground text-sm">
                           Total spent
@@ -769,17 +536,20 @@ export default function CustomerDetailPage() {
                           {customer.email}
                         </div>
                       </div>
-                      <CopyButton text={customer.email} label="Copy email" />
+                      <CopyButton
+                        text={customer?.email || ""}
+                        label="Copy email"
+                      />
                     </div>
 
                     <Separator />
 
                     <div>
                       <div className="text-muted-foreground mb-1 text-xs">
-                        Business name
+                        Full Name
                       </div>
                       <div className="text-muted-foreground text-sm">
-                        {customer.businessName || "-"}
+                        {customer?.name || "-"}
                       </div>
                     </div>
                   </div>
@@ -807,15 +577,15 @@ export default function CustomerDetailPage() {
                     </Button>
                   </div>
 
-                  {customer.metadata &&
-                  Object.keys(customer.metadata).length > 0 ? (
+                  {customer?.appMetadata &&
+                  Object.keys(customer?.appMetadata).length > 0 ? (
                     <CodeBlock
                       language="json"
                       showCopyButton={true}
                       maxHeight="none"
                       className="w-full"
                     >
-                      {JSON.stringify(customer.metadata, null, 2)}
+                      {JSON.stringify(customer?.appMetadata, null, 2)}
                     </CodeBlock>
                   ) : (
                     <div className="border-muted-foreground/20 hover:border-muted-foreground/30 flex min-h-[120px] items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors">
@@ -852,18 +622,43 @@ export default function CustomerDetailPage() {
       <CustomerModal
         open={isEditModalOpen}
         onOpenChange={setIsEditModalOpen}
-        customer={
-          customer
-            ? {
-                id: customer.id,
-                name: customer.name,
-                email: customer.email,
-                phone: customer.phone,
-                metadata: customer.metadata || {},
-              }
-            : null
-        }
+        customer={customer ?? null}
       />
+
+      {/* Delete Customer Modal */}
+      <FullScreenModal
+        open={isDeleteModalOpen}
+        onOpenChange={setIsDeleteModalOpen}
+        title="Delete Customer"
+        description={`Are you sure you want to delete ${customer.name}? This action cannot be undone.`}
+        size="small"
+        footer={
+          <div className="flex w-full justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsDeleteModalOpen(false)}
+              disabled={isDeleting}
+            >
+              No, Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDeleteCustomer}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Yes, Delete"}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-muted-foreground">
+            This will permanently delete the customer and all associated data.
+          </p>
+        </div>
+      </FullScreenModal>
       <CodeBlock
         language="json"
         filename="metadata.json"
@@ -871,7 +666,7 @@ export default function CustomerDetailPage() {
         maxHeight="none"
         className="w-full"
       >
-        {JSON.stringify(customer?.metadata || {}, null, 2)}
+        {JSON.stringify(customer?.appMetadata || {}, null, 2)}
       </CodeBlock>
     </div>
   );

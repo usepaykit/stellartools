@@ -3,80 +3,33 @@
 import * as React from "react";
 import { useState } from "react";
 
+import { retrieveCustomers } from "@/actions/customers";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { TextField } from "@/components/input-picker";
 import {
+  PhoneNumber,
   PhoneNumberPicker,
+  phoneNumberFromString,
   phoneNumberToString,
 } from "@/components/phone-number-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
+import { Customer } from "@/db";
 import { cn } from "@/lib/utils";
 import { truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { Trash2 } from "lucide-react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
-
-type Customer = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  walletAddress: string;
-  createdAt: Date;
-};
-
-const mockCustomers: Customer[] = [
-  {
-    id: "1",
-    name: "Manan Trivedi",
-    email: "manan@bricxlabs.com",
-    phone: "+1 234-567-8900",
-    walletAddress: "GABCDEFGHIJKLMNOPQRSTUVWXYZ12345678901234567890",
-    createdAt: new Date("2024-12-18T14:56:00"),
-  },
-  {
-    id: "2",
-    name: "Kevin Isaac",
-    email: "aravind@zephony.com",
-    phone: "+1 234-567-8901",
-    walletAddress: "GZYXWVUTSRQPONMLKJIHGFEDCBA98765432109876543210",
-    createdAt: new Date("2024-12-18T12:46:00"),
-  },
-  {
-    id: "3",
-    name: "Dilara Cossette",
-    email: "dilara@fip.agency",
-    phone: "+1 234-567-8902",
-    walletAddress: "G1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
-    createdAt: new Date("2024-12-18T08:04:00"),
-  },
-  {
-    id: "4",
-    name: "Rhys McCormack",
-    email: "rhysmccormack.business@gmail.com",
-    phone: "+1 234-567-8903",
-    walletAddress: "G9876543210ZYXWVUTSRQPONMLKJIHGFEDCBA9876543210",
-    createdAt: new Date("2024-12-18T06:48:00"),
-  },
-  {
-    id: "5",
-    name: "Sebastian Galvez",
-    email: "Alejandro@leadrsglobal.com",
-    phone: "+1 234-567-8904",
-    walletAddress: "GABCD1234567890EFGHIJKLMNOPQRSTUVWXYZ1234567890",
-    createdAt: new Date("2024-12-18T05:25:00"),
-  },
-];
 
 const columns: ColumnDef<Customer>[] = [
   {
@@ -171,7 +124,7 @@ const columns: ColumnDef<Customer>[] = [
     },
     cell: ({ row }) => (
       <div className="text-muted-foreground font-mono text-sm">
-        {truncate(row.original.walletAddress)}
+        {truncate(row.original.walletAddresses?.[0]?.address ?? "-")}
       </div>
     ),
     enableSorting: true,
@@ -255,6 +208,11 @@ export default function CustomersPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const router = useRouter();
 
+  const { data: customers, isLoading: isLoadingCustomers } = useQuery({
+    queryKey: ["customers"],
+    queryFn: () => retrieveCustomers(),
+  });
+
   const handleRowClick = (customer: Customer) => {
     router.push(`/dashboard/customers/${customer.id}`);
   };
@@ -311,10 +269,11 @@ export default function CustomersPage() {
 
             <DataTable
               columns={columns}
-              data={mockCustomers}
+              data={customers ?? []}
               enableBulkSelect={true}
               actions={tableActions}
               onRowClick={handleRowClick}
+              isLoading={isLoadingCustomers}
             />
           </div>
         </DashboardSidebarInset>
@@ -328,14 +287,6 @@ export default function CustomersPage() {
   );
 }
 
-type CustomerForModal = {
-  id?: string;
-  name: string;
-  email?: string;
-  phone?: string;
-  metadata?: Record<string, string>;
-};
-
 export function CustomerModal({
   open,
   onOpenChange,
@@ -343,7 +294,7 @@ export function CustomerModal({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  customer?: CustomerForModal | null;
+  customer?: Partial<Customer> | null;
 }) {
   const isEditMode = !!customer;
   const form = RHF.useForm<CustomerFormData>({
@@ -363,19 +314,12 @@ export function CustomerModal({
 
   React.useEffect(() => {
     if (open && customer) {
-      let phoneNumber = { number: "", countryCode: "US" };
-      if (customer.phone) {
-        const phoneMatch = customer.phone.match(/\+?(\d+)\s*(.+)/);
-        if (phoneMatch) {
-          phoneNumber = {
-            countryCode: phoneMatch[1] === "1" ? "US" : phoneMatch[1],
-            number: phoneMatch[2].replace(/\D/g, ""),
-          };
-        }
-      }
+      const phoneNumber = customer.phone
+        ? phoneNumberFromString(customer.phone)
+        : undefined;
 
-      const metadataArray = customer.metadata
-        ? Object.entries(customer.metadata).map(([key, value]) => ({
+      const metadataArray = customer.appMetadata
+        ? Object.entries(customer.appMetadata).map(([key, value]) => ({
             key,
             value: value || "",
           }))
@@ -498,7 +442,7 @@ export function CustomerModal({
             <div>
               <h3 className="mb-2 text-lg font-semibold">Basic Information</h3>
               <p className="text-muted-foreground text-sm">
-                Enter the customer&apos;s basic contact information.
+                Enter the customer&’s basic contact information.
               </p>
             </div>
 
@@ -541,16 +485,23 @@ export function CustomerModal({
             <RHF.Controller
               control={form.control}
               name="phoneNumber"
-              render={({ field, fieldState: { error } }) => (
-                <PhoneNumberPicker
-                  id="phone"
-                  value={field.value}
-                  onChange={field.onChange}
-                  label="Phone number"
-                  error={error?.message || null}
-                  groupClassName="w-full shadow-none"
-                />
-              )}
+              render={({ field, fieldState: { error } }) => {
+                const phoneValue: PhoneNumber = {
+                  number: field.value?.number || "",
+                  countryCode: field.value?.countryCode || "US",
+                };
+
+                return (
+                  <PhoneNumberPicker
+                    id="phone"
+                    value={phoneValue}
+                    onChange={field.onChange}
+                    label="Phone number"
+                    error={(error as any)?.number?.message}
+                    groupClassName="w-full shadow-none"
+                  />
+                );
+              }}
             />
           </div>
 

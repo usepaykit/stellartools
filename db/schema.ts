@@ -22,18 +22,19 @@ export type AuthProvider = (typeof authProviderEnum.enumValues)[number];
 export const accounts = pgTable("account", {
   id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
-  userName: text("user_name").notNull(),
   profile: jsonb("profile").$type<{
-    first_name?: string;
-    last_name?: string;
-    avatar_url?: string;
+    firstName?: string;
+    lastName?: string;
+    avatarUrl?: string;
   }>(),
-  sso: jsonb("sso").$type<{
-    values: Array<{ provider: AuthProvider; sub: string }>;
-  }>(),
+  sso: jsonb("sso")
+    .$type<{
+      values: Array<{ provider: AuthProvider; sub: string }>;
+    }>()
+    .notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  metadata: jsonb("metadata").$type<object>().default({}),
+  metadata: jsonb("metadata").$type<object>(),
 });
 
 export const auth = pgTable("auth", {
@@ -58,19 +59,15 @@ export const organizations = pgTable("organization", {
     .references(() => accounts.id),
   name: text("name").notNull(),
   description: text("description"),
-  slug: text("slug").notNull(),
   logoUrl: text("logo_url"),
   phoneNumber: text("phone_number"),
   address: text("address"),
   socialLinks: jsonb("social_links").$type<object>().default({}),
-  ownerAccountId: text("owner_account_id")
-    .notNull()
-    .references(() => accounts.id),
   settings: jsonb("settings").$type<object>().notNull(),
+  settings: jsonb("settings").$type<object | null>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  metadata: jsonb("metadata").$type<object>().default({}),
-  environment: networkEnum("network").notNull(),
+  metadata: jsonb("metadata").$type<object | null>(),
   stellarAccounts: jsonb("stellar_account").$type<{
     [K in (typeof networkEnum.enumValues)[number]]: {
       public_key: string;
@@ -165,6 +162,11 @@ export const assets = pgTable(
 
 export type CustomerMetadata = Record<string, string>;
 
+export type CustomerWalletAddress = {
+  address: string;
+  memo?: string;
+};
+
 export const customers = pgTable(
   "customer",
   {
@@ -179,6 +181,7 @@ export const customers = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     environment: networkEnum("network").notNull(),
+    walletAddresses: jsonb("wallet_addresses").$type<CustomerWalletAddress[]>(),
   },
   (table) => ({
     uniqueOrgEmail: unique().on(table.organizationId, table.email),
@@ -229,6 +232,7 @@ export const products = pgTable("product", {
   environment: networkEnum("network").notNull(),
   priceAmount: integer("price_amount").notNull(),
   recurringPeriod: recurringPeriodEnum("recurring_period"),
+  isArchived: boolean("is_archived").default(false).notNull(),
 
   // Metered billing
   unit: text("unit"), // e.g., "tokens", "MB", "requests", "images", "minutes"
@@ -256,6 +260,7 @@ export const checkouts = pgTable(
     customerId: text("customer_id").references(() => customers.id),
     productId: text("product_id").references(() => products.id),
     amount: integer("amount"),
+    assetId: text("asset_id").references(() => assets.id),
     description: text("description"),
     status: checkoutStatusEnum("status").notNull(),
     paymentUrl: text("payment_url").notNull(),
@@ -355,13 +360,17 @@ export const webhookLogs = pgTable("webhook_log", {
     .notNull()
     .references(() => organizations.id),
   eventType: text("event_type").notNull(),
-  payload: jsonb("payload").$type<object>().notNull(),
+  request: jsonb("request").$type<object>().notNull(),
   statusCode: integer("status_code"),
   errorMessage: text("error_message"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   responseTime: integer("response_time"), // in milliseconds
+  response: jsonb("response").$type<object | null>(),
+  apiVersion: text("api_version").notNull(),
   environment: networkEnum("network").notNull(),
+  nextRetry: timestamp("next_retry"),
+  description: text("description").notNull(),
 });
 
 export const refundStatusEnum = pgEnum("refund_status", [
@@ -470,6 +479,24 @@ export const creditTransactions = pgTable(
   })
 );
 
+export const passwordReset = pgTable(
+  "password_reset",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    expiresAt: timestamp("expires_at").notNull(),
+    usedAt: timestamp("used_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    tokenIndex: index("password_reset_token_idx").on(table.token),
+  })
+);
+
 export type Account = InferSelectModel<typeof accounts>;
 export type Organization = InferSelectModel<typeof organizations>;
 export type TeamMember = InferSelectModel<typeof teamMembers>;
@@ -488,3 +515,4 @@ export type CreditBalance = InferSelectModel<typeof creditBalances>;
 export type CreditTransaction = InferSelectModel<typeof creditTransactions>;
 export type Subscription = InferSelectModel<typeof subscriptions>;
 export type Auth = InferSelectModel<typeof auth>;
+export type PasswordReset = InferSelectModel<typeof passwordReset>;
