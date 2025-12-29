@@ -8,6 +8,14 @@ const nextConfig: NextConfig = {
         hostname: "stellar.creit.tech",
         pathname: "/wallet-icons/**",
       },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+      {
+        protocol: "https",
+        hostname: "assets.aceternity.com",
+      },
     ],
   },
 };
