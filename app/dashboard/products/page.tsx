@@ -13,6 +13,7 @@ import {
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import {
   NumberPicker,
+  SelectPicker,
   TextAreaField,
   TextField,
 } from "@/components/input-picker";
@@ -23,13 +24,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "@/components/ui/toast";
 import { RecurringPeriod } from "@/db";
 import { Product as ProductSchema } from "@/db";
@@ -704,23 +698,23 @@ function ProductsModal({
 
                 {watched.type == "subscription" && (
                   <RHF.Controller
-                    control={form.control}
                     name="recurringPeriod"
+                    control={form.control}
                     render={({ field }) => (
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <SelectTrigger className="mt-2.5 h-12 w-[150px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="day">Daily</SelectItem>
-                          <SelectItem value="week">Weekly</SelectItem>
-                          <SelectItem value="month">Monthly</SelectItem>
-                          <SelectItem value="year">Yearly</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <SelectPicker
+                        id={field.name}
+                        value={field.value as string}
+                        onChange={field.onChange}
+                        trigger={undefined}
+                        triggerValuePlaceholder="Select recurring period"
+                        triggerClassName="mt-2.5 h-12 w-[150px]"
+                        items={[
+                          { value: "day", label: "Daily" },
+                          { value: "week", label: "Weekly" },
+                          { value: "month", label: "Monthly" },
+                          { value: "year", label: "Yearly" },
+                        ]}
+                      />
                     )}
                   />
                 )}

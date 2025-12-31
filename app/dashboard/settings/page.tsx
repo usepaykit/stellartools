@@ -6,7 +6,11 @@ import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset"
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { TextAreaField, TextField } from "@/components/input-picker";
+import {
+  SelectPicker,
+  TextAreaField,
+  TextField,
+} from "@/components/input-picker";
 import {
   PhoneNumber,
   PhoneNumberPicker,
@@ -31,14 +35,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "@/components/ui/toast";
 import {
   UnderlineTabs,
@@ -1081,28 +1077,23 @@ export default function SettingsPage() {
               control={inviteMemberForm.control}
               name="role"
               render={({ field, fieldState: { error } }) => (
-                <div className="space-y-2">
-                  <Label htmlFor="invite-role">Role</Label>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="invite-role" className="w-full">
-                      <SelectValue placeholder="Select a role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="viewer">Viewer</SelectItem>
-                      <SelectItem value="developer">Developer</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="owner">Owner</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {error && (
-                    <p className="text-destructive text-sm" role="alert">
-                      {error.message}
-                    </p>
-                  )}
-                  <p className="text-muted-foreground text-xs">
-                    Choose the permission level for this team member
-                  </p>
-                </div>
+                <SelectPicker
+                  id={field.name}
+                  value={field.value as string}
+                  onChange={field.onChange}
+                  trigger={undefined}
+                  triggerValuePlaceholder="Select a role"
+                  triggerClassName="w-full"
+                  items={[
+                    { value: "viewer", label: "Viewer" },
+                    { value: "developer", label: "Developer" },
+                    { value: "admin", label: "Admin" },
+                    { value: "owner", label: "Owner" },
+                  ]}
+                  error={error?.message}
+                  label="Role"
+                  helpText="Choose the permission level for this team member"
+                />
               )}
             />
           </form>
@@ -1187,28 +1178,23 @@ export default function SettingsPage() {
             control={updateRoleForm.control}
             name="role"
             render={({ field, fieldState: { error } }) => (
-              <div className="space-y-2">
-                <Label htmlFor="update-role">Role</Label>
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id="update-role" className="w-full">
-                    <SelectValue placeholder="Select a role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="viewer">Viewer</SelectItem>
-                    <SelectItem value="developer">Developer</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="owner">Owner</SelectItem>
-                  </SelectContent>
-                </Select>
-                {error && (
-                  <p className="text-destructive text-sm" role="alert">
-                    {error.message}
-                  </p>
-                )}
-                <p className="text-muted-foreground text-xs">
-                  Choose the permission level for this team member
-                </p>
-              </div>
+              <SelectPicker
+                id={field.name}
+                value={field.value as string}
+                onChange={field.onChange}
+                trigger={undefined}
+                triggerValuePlaceholder="Select a role"
+                triggerClassName="w-full"
+                items={[
+                  { value: "viewer", label: "Viewer" },
+                  { value: "developer", label: "Developer" },
+                  { value: "admin", label: "Admin" },
+                  { value: "owner", label: "Owner" },
+                ]}
+                error={error?.message}
+                label="Role"
+                helpText="Choose the permission level for this team member"
+              />
             )}
           />
         </form>

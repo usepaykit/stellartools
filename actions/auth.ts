@@ -155,7 +155,7 @@ export const accountValidator = async (
   const isNewUser = !account;
 
   if (!account) {
-    if (intent === "SIGN_IN") {
+    if (intent === "SIGN_IN" && provider === "local") {
       throw new Error(
         "No account found with this email. Please sign up first."
       );
