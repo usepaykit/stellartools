@@ -231,7 +231,6 @@ export const products = pgTable("product", {
   environment: networkEnum("network").notNull(),
   priceAmount: integer("price_amount").notNull(),
   recurringPeriod: recurringPeriodEnum("recurring_period"),
-  isArchived: boolean("is_archived").default(false).notNull(),
 
   // Metered billing
   unit: text("unit"), // e.g., "tokens", "MB", "requests", "images", "minutes"

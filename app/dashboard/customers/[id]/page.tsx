@@ -2,8 +2,10 @@
 
 import * as React from "react";
 
+import { postCheckout } from "@/actions/checkout";
 import { retrieveCustomer } from "@/actions/customers";
 import { retrievePayments } from "@/actions/payment";
+import { retrieveProducts } from "@/actions/product";
 import { CustomerModal } from "@/app/dashboard/customers/page";
 import { RefundModal } from "@/app/dashboard/transactions/page";
 import { CodeBlock } from "@/components/code-block";
@@ -11,6 +13,11 @@ import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset"
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
+import {
+  DateTimePicker,
+  SelectPicker,
+  TextAreaField,
+} from "@/components/input-picker";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -32,23 +39,30 @@ import { toast } from "@/components/ui/toast";
 import { Payment } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { cn } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   CheckCircle2,
   ChevronRight,
   Clock,
   Copy,
+  CreditCard,
   Edit,
   Eye,
   EyeOff,
+  Loader2,
   MoreHorizontal,
   Plus,
   XCircle,
 } from "lucide-react";
+import moment from "moment";
+import { nanoid } from "nanoid";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import * as RHF from "react-hook-form";
+import { z } from "zod";
 
 const StatusBadge = ({ status }: { status: Payment["status"] }) => {
   const variants = {
@@ -104,7 +118,6 @@ const CopyButton = ({ text, label }: { text: string; label?: string }) => {
   );
 };
 
-// Payment columns definition
 const paymentColumns: ColumnDef<Payment>[] = [
   {
     accessorKey: "amount",
@@ -171,6 +184,7 @@ export default function CustomerDetailPage() {
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = React.useState(false);
 
   const { data: payments, isLoading: isLoadingPayments } = useQuery({
     queryKey: ["payments", customerId],
@@ -311,10 +325,11 @@ export default function CustomerDetailPage() {
                   <Button
                     variant="outline"
                     className="w-full gap-2 shadow-none sm:w-auto"
+                    onClick={() => setIsCheckoutModalOpen(true)}
                   >
-                    <Plus className="h-4 w-4" />
-                    <span className="hidden sm:inline">Create payment</span>
-                    <span className="sm:hidden">Payment</span>
+                    <CreditCard className="h-4 w-4" />
+                    <span className="hidden sm:inline">Create checkout</span>
+                    <span className="sm:hidden">Checkout</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -560,7 +575,6 @@ export default function CustomerDetailPage() {
                   </div>
                 </div>
 
-                {/* Metadata Section */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold sm:text-xl">
@@ -606,7 +620,6 @@ export default function CustomerDetailPage() {
         </DashboardSidebarInset>
       </DashboardSidebar>
 
-      {/* Refund Modal */}
       <RefundModal
         open={isRefundModalOpen}
         onOpenChange={(open) => {
@@ -618,14 +631,12 @@ export default function CustomerDetailPage() {
         initialPaymentId={selectedPaymentId || undefined}
       />
 
-      {/* Edit Customer Modal */}
       <CustomerModal
         open={isEditModalOpen}
         onOpenChange={setIsEditModalOpen}
         customer={customer ?? null}
       />
 
-      {/* Delete Customer Modal */}
       <FullScreenModal
         open={isDeleteModalOpen}
         onOpenChange={setIsDeleteModalOpen}
@@ -659,6 +670,14 @@ export default function CustomerDetailPage() {
           </p>
         </div>
       </FullScreenModal>
+
+      <CheckoutModal
+        open={isCheckoutModalOpen}
+        onOpenChange={setIsCheckoutModalOpen}
+        customerId={customerId}
+        customerName={customer.name || ""}
+      />
+
       <CodeBlock
         language="json"
         filename="metadata.json"
@@ -669,5 +688,260 @@ export default function CustomerDetailPage() {
         {JSON.stringify(customer?.appMetadata || {}, null, 2)}
       </CodeBlock>
     </div>
+  );
+}
+
+const checkoutSchema = z.object({
+  productId: z.string().min(1, "Please select a product"),
+  description: z.string().optional(),
+  expiresAt: z
+    .object({
+      date: z.date({
+        message: "Expiration date is required",
+      }),
+      time: z.string().min(1, "Expiration time is required"),
+    })
+    .refine((data) => data.date !== undefined, {
+      message: "Expiration date is required",
+      path: ["date"],
+    }),
+});
+
+type CheckoutFormData = z.infer<typeof checkoutSchema>;
+
+function CheckoutModal({
+  open,
+  onOpenChange,
+  customerId,
+  customerName,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  customerId: string;
+  customerName: string;
+}) {
+  const queryClient = useQueryClient();
+
+  const form = RHF.useForm<CheckoutFormData>({
+    resolver: zodResolver(checkoutSchema),
+    defaultValues: {
+      productId: "",
+      description: "",
+      expiresAt: {
+        date: undefined,
+        time: "",
+      },
+    },
+  });
+
+  const { data: products, isLoading: isLoadingProducts } = useQuery({
+    queryKey: ["customer", "products"],
+    queryFn: () => retrieveProducts(),
+    select: (data) =>
+      data
+        .filter((p) => p.status === "active")
+        .map((p) => ({
+          value: p.id,
+          label: `${p.name} - ${p.priceAmount} ${p.assetId}`,
+        })),
+  });
+
+  const createCheckoutMutation = useMutation({
+    mutationFn: async (data: CheckoutFormData) => {
+      const expiresAt = moment(data.expiresAt.date)
+        .add(data.expiresAt.time, "hours")
+        .toDate();
+
+      const paymentUrl = `${process.env.NEXT_PUBLIC_CHECKOUT_BASE_HOST}/pay/${nanoid(52)}`;
+
+      return await postCheckout({
+        customerId,
+        productId: data.productId,
+        description: data.description || null,
+        status: "open",
+        expiresAt,
+        paymentUrl,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        metadata: {},
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["payments", customerId],
+      });
+      toast.success("Checkout created successfully", {
+        description: `Checkout session for ${customerName} has been created.`,
+      } as Parameters<typeof toast.success>[1]);
+      form.reset();
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      console.error("Failed to create checkout:", error);
+      toast.error("Failed to create checkout", {
+        id: "create-checkout-error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+      });
+    },
+  });
+
+  const onSubmit = async (data: CheckoutFormData) => {
+    createCheckoutMutation.mutate(data);
+  };
+
+  // Reset form when modal closes
+  React.useEffect(() => {
+    if (!open) {
+      form.reset();
+    }
+  }, [open, form]);
+
+  return (
+    <FullScreenModal
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Create Checkout"
+      description={`Create a new checkout session for ${customerName}`}
+      footer={
+        <div className="flex w-full justify-between">
+          <div />
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              disabled={createCheckoutMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={form.handleSubmit(onSubmit)}
+              disabled={createCheckoutMutation.isPending || isLoadingProducts}
+              className="gap-2"
+            >
+              {createCheckoutMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create Checkout"
+              )}
+            </Button>
+          </div>
+        </div>
+      }
+    >
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="grid w-full gap-6 lg:grid-cols-2"
+        noValidate
+      >
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-lg font-semibold">Checkout Details</h3>
+            <p className="text-muted-foreground text-sm">
+              Configure the checkout session
+            </p>
+          </div>
+
+          <RHF.Controller
+            control={form.control}
+            name="productId"
+            render={({ field, fieldState: { error } }) => (
+              <SelectPicker
+                id="productId"
+                value={field.value}
+                onChange={field.onChange}
+                items={products ?? []}
+                isLoading={isLoadingProducts}
+                trigger={<></>}
+                triggerValuePlaceholder="Select a product"
+                triggerClassName="w-full shadow-none"
+                label="Product"
+                error={error?.message || null}
+                helpText="Choose the product for this checkout"
+                disabled={isLoadingProducts || createCheckoutMutation.isPending}
+              />
+            )}
+          />
+
+          <RHF.Controller
+            control={form.control}
+            name="description"
+            render={({ field, fieldState: { error } }) => (
+              <TextAreaField
+                id="description"
+                label="Description (Optional)"
+                value={field.value || ""}
+                onChange={field.onChange}
+                placeholder="Add notes or additional details about this checkout..."
+                error={error?.message || null}
+                disabled={createCheckoutMutation.isPending}
+                className="w-full shadow-none"
+                rows={4}
+              />
+            )}
+          />
+        </div>
+
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-lg font-semibold">Expiration</h3>
+            <p className="text-muted-foreground text-sm">
+              Set when this checkout session expires
+            </p>
+          </div>
+
+          <RHF.Controller
+            control={form.control}
+            name="expiresAt"
+            render={({ field, fieldState: { error } }) => (
+              <DateTimePicker
+                id="expiresAt"
+                label="Expiration Date & Time"
+                value={field.value}
+                onChange={field.onChange}
+                error={error?.message || null}
+                disabled={createCheckoutMutation.isPending}
+                layout="vertical"
+                dateFormat="PPP"
+              />
+            )}
+          />
+
+          <div className="bg-muted/50 space-y-2 rounded-lg border p-4">
+            <div className="flex items-start gap-2">
+              <Clock className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Checkout Link</p>
+                <p className="text-muted-foreground text-xs">
+                  A unique checkout link will be generated after creation. The
+                  customer can use this link to complete their payment before
+                  the expiration time.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-muted/50 space-y-2 rounded-lg border p-4">
+            <div className="flex items-start gap-2">
+              <CreditCard className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Customer</p>
+                <p className="text-muted-foreground text-xs">{customerName}</p>
+                <p className="text-muted-foreground font-mono text-xs">
+                  {customerId}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </FullScreenModal>
   );
 }

@@ -237,6 +237,7 @@ export default function DashboardPage() {
                   triggerValuePlaceholder="Select date range"
                   trigger={undefined}
                   triggerClassName="w-[180px]"
+                  isLoading={true}
                   items={[
                     { value: "7", label: "Last 7 days" },
                     { value: "30", label: "Last 30 days" },

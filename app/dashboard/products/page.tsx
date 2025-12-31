@@ -439,7 +439,6 @@ function ProductsModal({
         priceAmount: parseFloat(data.price.amount),
         recurringPeriod: data.recurringPeriod ?? null,
 
-        // Meter
         unit: data.unit ?? null,
         unitDivisor: data.unitDivisor ?? null,
         unitsPerCredit: data.unitsPerCredit ?? null,
@@ -447,7 +446,6 @@ function ProductsModal({
         creditExpiryDays: null,
         createdAt: new Date(),
         updatedAt: new Date(),
-        isArchived: false,
       };
 
       return await postProduct(productData);
