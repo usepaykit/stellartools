@@ -17,9 +17,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/toast";
 import { useCopy } from "@/hooks/use-copy";
+import { useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   CheckCircle2,
@@ -387,10 +388,9 @@ function TransactionsPageContent() {
     string | null
   >(null);
 
-  const { data: payments, isLoading } = useQuery({
-    queryKey: ["payments"],
-    queryFn: () => retrievePaymentsWithDetails(),
-  });
+  const { data: payments, isLoading } = useOrgQuery(["payments"], () =>
+    retrievePaymentsWithDetails()
+  );
 
   const stats = React.useMemo(() => {
     if (!payments?.length) {

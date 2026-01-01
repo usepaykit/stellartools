@@ -20,10 +20,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/toast";
 import { Webhook as WebhookSchema } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
+import { useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { WebhookEvent } from "@stellartools/core";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   Activity,
@@ -265,22 +266,22 @@ function WebhooksPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const { data: webhooks = [], isLoading } = useQuery({
-    queryKey: ["webhooks"],
-    queryFn: async () => {
-      return await getWebhooksWithAnalytics();
-    },
-    select: (webhooksData) => {
-      return webhooksData.map((webhook) => ({
-        ...webhook,
-        logsCount: webhook.logsCount,
-        eventsFrom: "account" as const,
-        eventCount: webhook.events.length,
-        errorRate: 0,
-        activity: [],
-      }));
-    },
-  });
+  const { data: webhooks = [], isLoading } = useOrgQuery(
+    ["webhooks"],
+    () => getWebhooksWithAnalytics(),
+    {
+      select: (webhooksData) => {
+        return webhooksData.map((webhook) => ({
+          ...webhook,
+          logsCount: webhook.logsCount,
+          eventsFrom: "account" as const,
+          eventCount: webhook.events.length,
+          errorRate: 0,
+          activity: [],
+        }));
+      },
+    }
+  );
 
   React.useEffect(() => {
     if (searchParams.get("create") === "true") {

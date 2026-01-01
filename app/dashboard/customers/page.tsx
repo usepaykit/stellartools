@@ -20,10 +20,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
 import { Customer } from "@/db";
+import { useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { Trash2 } from "lucide-react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Plus } from "lucide-react";
@@ -208,10 +208,10 @@ export default function CustomersPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const router = useRouter();
 
-  const { data: customers, isLoading: isLoadingCustomers } = useQuery({
-    queryKey: ["customers"],
-    queryFn: () => retrieveCustomers(),
-  });
+  const { data: customers, isLoading: isLoadingCustomers } = useOrgQuery(
+    ["customers"],
+    () => retrieveCustomers()
+  );
 
   const handleRowClick = (customer: Customer) => {
     router.push(`/dashboard/customers/${customer.id}`);

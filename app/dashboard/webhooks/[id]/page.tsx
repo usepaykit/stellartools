@@ -28,7 +28,7 @@ import {
 } from "@/components/underline-tabs";
 import { WebhookLog } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
-import { useQuery } from "@tanstack/react-query";
+import { useOrgQuery } from "@/hooks/use-org-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   CheckCircle2,
@@ -148,31 +148,35 @@ export default function WebhookLogPage() {
   const [searchQuery, _] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
 
-  const { data: webhookLogs, isLoading: isLoadingWebhookLogs } = useQuery({
-    queryKey: ["webhookLogs", webhookId],
-    queryFn: async () => {
-      return await retrieveWebhookLogs(webhookId);
-    },
-    enabled: !!webhookId,
-    select: (data) => {
-      return data.map((log) => ({
-        id: log.id,
-        eventType: log.eventType,
-        status:
-          log.statusCode === 200 ? ("succeeded" as const) : ("failed" as const),
-        statusCode: log.statusCode ?? undefined,
-        timestamp: new Date(log.createdAt),
-        eventId: log.id,
-        originDate: new Date(log.createdAt),
-        source: "Automatic",
-        apiVersion: log.apiVersion,
-        description: log.description,
-        response: log.response ?? undefined,
-        request: log.request ?? {},
-        nextRetry: log.nextRetry ? moment(log.nextRetry).fromNow() : undefined,
-      }));
-    },
-  });
+  const { data: webhookLogs, isLoading: isLoadingWebhookLogs } = useOrgQuery(
+    ["webhookLogs", webhookId],
+    () => retrieveWebhookLogs(webhookId),
+    {
+      enabled: !!webhookId,
+      select: (data) => {
+        return data.map((log) => ({
+          id: log.id,
+          eventType: log.eventType,
+          status:
+            log.statusCode === 200
+              ? ("succeeded" as const)
+              : ("failed" as const),
+          statusCode: log.statusCode ?? undefined,
+          timestamp: new Date(log.createdAt),
+          eventId: log.id,
+          originDate: new Date(log.createdAt),
+          source: "Automatic",
+          apiVersion: log.apiVersion,
+          description: log.description,
+          response: log.response ?? undefined,
+          request: log.request ?? {},
+          nextRetry: log.nextRetry
+            ? moment(log.nextRetry).fromNow()
+            : undefined,
+        }));
+      },
+    }
+  );
 
   const filteredLogs = React.useMemo(() => {
     let logs = webhookLogs;

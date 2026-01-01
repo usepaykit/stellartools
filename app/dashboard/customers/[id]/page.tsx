@@ -38,9 +38,10 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
 import { Payment } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
+import { useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   CheckCircle2,
@@ -171,7 +172,6 @@ export default function CustomerDetailPage() {
   const router = useRouter();
   const params = useParams();
   const customerId = params?.id as string;
-  // const customer = getCustomerById(customerId);
 
   const [hiddenWallets, setHiddenWallets] = React.useState<Set<string>>(
     new Set()
@@ -185,15 +185,15 @@ export default function CustomerDetailPage() {
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = React.useState(false);
 
-  const { data: payments, isLoading: isLoadingPayments } = useQuery({
-    queryKey: ["payments", customerId],
-    queryFn: () => retrievePayments(undefined, { customerId }, undefined),
-  });
+  const { data: payments, isLoading: isLoadingPayments } = useOrgQuery(
+    ["payments"],
+    () => retrievePayments(undefined, { customerId }, undefined)
+  );
 
-  const { data: customer, isLoading: _customerLoading } = useQuery({
-    queryKey: ["customer", customerId],
-    queryFn: () => retrieveCustomer({ id: customerId }),
-  });
+  const { data: customer, isLoading: _customerLoading } = useOrgQuery(
+    ["customer", customerId],
+    () => retrieveCustomer({ id: customerId })
+  );
 
   const handleToggleWalletVisibility = (walletId: string) => {
     const newHidden = new Set(hiddenWallets);
@@ -730,17 +730,19 @@ function CheckoutModal({
     },
   });
 
-  const { data: products, isLoading: isLoadingProducts } = useQuery({
-    queryKey: ["customer", "products"],
-    queryFn: () => retrieveProducts(),
-    select: (data) =>
-      data
-        .filter((p) => p.status === "active")
-        .map((p) => ({
-          value: p.id,
-          label: `${p.name} - ${p.priceAmount} ${p.assetId}`,
-        })),
-  });
+  const { data: products, isLoading: isLoadingProducts } = useOrgQuery(
+    ["products"],
+    () => retrieveProducts(),
+    {
+      select: (data) =>
+        data
+          .filter((p) => p.status === "active")
+          .map((p) => ({
+            value: p.id,
+            label: `${p.name} - ${p.priceAmount} ${p.assetId}`,
+          })),
+    }
+  );
 
   const createCheckoutMutation = useMutation({
     mutationFn: async (data: CheckoutFormData) => {

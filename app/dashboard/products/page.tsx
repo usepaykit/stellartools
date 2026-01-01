@@ -27,8 +27,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/components/ui/toast";
 import { RecurringPeriod } from "@/db";
 import { Product as ProductSchema } from "@/db";
+import { useOrgQuery } from "@/hooks/use-org-query";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Column, ColumnDef } from "@tanstack/react-table";
 import {
   Archive,
@@ -203,27 +204,29 @@ function ProductsPageContent() {
     null
   );
 
-  const { data: products, isLoading } = useQuery({
-    queryKey: ["products"],
-    queryFn: () => retrieveProductsWithAsset(),
-    select: (productsData) => {
-      return productsData.map(({ product, asset }) => {
-        return {
-          id: product.id,
-          name: product.name,
-          pricing: {
-            amount: product.priceAmount,
-            asset: asset.code,
-            isRecurring: product.type === "subscription",
-            period: product.recurringPeriod!,
-          },
-          status: product.status,
-          createdAt: product.createdAt,
-          updatedAt: product.updatedAt,
-        };
-      });
-    },
-  });
+  const { data: products, isLoading } = useOrgQuery(
+    ["products"],
+    () => retrieveProductsWithAsset(),
+    {
+      select: (productsData) => {
+        return productsData.map(({ product, asset }) => {
+          return {
+            id: product.id,
+            name: product.name,
+            pricing: {
+              amount: product.priceAmount,
+              asset: asset.code,
+              isRecurring: product.type === "subscription",
+              period: product.recurringPeriod!,
+            },
+            status: product.status,
+            createdAt: product.createdAt,
+            updatedAt: product.updatedAt,
+          };
+        });
+      },
+    }
+  );
 
   const stats = React.useMemo(
     () => ({

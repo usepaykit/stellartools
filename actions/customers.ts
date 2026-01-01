@@ -15,12 +15,7 @@ export const postCustomer = async (
 
   const [customer] = await db
     .insert(customers)
-    .values({
-      ...params,
-      id: `cu_${nanoid(25)}`,
-      organizationId,
-      environment,
-    } as Customer)
+    .values({ ...params, id: `cu_${nanoid(25)}`, organizationId, environment })
     .returning();
 
   if (!customer) throw new Error("Customer not created");
@@ -36,11 +31,12 @@ export const upsertCustomer = async (
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const customer = await retrieveCustomer(
-    {
-      ...(params.email ? { email: params.email as string } : {}),
-      ...(params.phone ? { phone: params.phone as string } : {}),
-      ...(params.id ? { id: params.id } : {}),
-    } as unknown as any,
+    (() => {
+      if (params.id) return { id: params.id };
+      if (params.email) return { email: params.email };
+      if (params.phone) return { phone: params.phone };
+      return undefined;
+    })(),
     organizationId,
     environment
   );

@@ -120,6 +120,7 @@ export const teamInvites = pgTable("team_invite", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object | null>(),
+  environment: networkEnum("network").notNull(),
 });
 
 export const apiKeys = pgTable("api_key", {

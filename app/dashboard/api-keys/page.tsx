@@ -21,8 +21,9 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { ApiKey } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
+import { useOrgQuery } from "@/hooks/use-org-query";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   ChevronRight,
@@ -53,10 +54,9 @@ export default function ApiKeysPage() {
   const [createdApiKey, setCreatedApiKey] = React.useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: apiKeys = [], isLoading } = useQuery({
-    queryKey: ["apiKeys"],
-    queryFn: () => retrieveApiKeys(),
-  });
+  const { data: apiKeys = [], isLoading } = useOrgQuery(["apiKeys"], () =>
+    retrieveApiKeys()
+  );
 
   const { handleCopy } = useCopy();
 
