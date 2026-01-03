@@ -53,10 +53,8 @@ import {
   ChevronRight,
   Copy,
   ExternalLink,
-  Loader2,
   Mail,
   Plus,
-  Save,
   User,
 } from "lucide-react";
 import moment from "moment";
@@ -328,17 +326,13 @@ export default function SettingsPage() {
         email: selectedMemberForRoleUpdate.email,
         newRole: data.role,
       });
-      toast.success("Role updated successfully", {
-        description: `${selectedMemberForRoleUpdate.email}'s role has been updated to ${data.role}`,
-      } as Parameters<typeof toast.success>[1]);
+      toast.success("Role updated successfully");
       updateRoleForm.reset();
       setIsUpdateRoleModalOpen(false);
       setSelectedMemberForRoleUpdate(null);
     } catch (error) {
       console.error("Failed to update role:", error);
-      toast.error("Failed to update role", {
-        description: "Please try again later",
-      } as Parameters<typeof toast.error>[1]);
+      toast.error("Failed to update role");
     } finally {
       setIsSubmitting(false);
     }
@@ -353,24 +347,21 @@ export default function SettingsPage() {
     }
   }, [isUpdateRoleModalOpen, updateRoleForm]);
 
-  const onInviteMemberSubmit = async (data: InviteMemberFormData) => {
+  const onInviteMemberSubmit = async () => {
     setIsSubmitting(true);
     try {
       const link = `${window.location.origin}/join/${nanoid(25)}`;
       setInviteLink(link);
 
-      toast.success("Invitation created successfully", {
-        description: `Share the link with ${data.emails.length === 1 ? data.emails[0] : `${data.emails.length} people`}`,
-      } as Parameters<typeof toast.success>[1]);
+      toast.success("Invitation created successfully");
 
       // Don't close modal yet - show the link
       // Optionally switch to pending tab
       setTeamTab("pending");
     } catch (error) {
-      console.error("Failed to send invitation:", error);
-      toast.error("Failed to create invitation", {
-        description: "Please try again later",
-      } as Parameters<typeof toast.error>[1]);
+      const errorMessage =
+        error instanceof Error ? error.message : "An unexpected error occurred";
+      toast.error("Failed to create invitation", { description: errorMessage });
     } finally {
       setIsSubmitting(false);
     }
@@ -700,15 +691,9 @@ export default function SettingsPage() {
                           type="submit"
                           disabled={isSubmitting}
                           className="gap-2 shadow-none"
+                          isLoading={isSubmitting}
                         >
-                          {isSubmitting ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              Saving...
-                            </>
-                          ) : (
-                            "Save Changes"
-                          )}
+                          {isSubmitting ? "Saving..." : "Save Changes"}
                         </Button>
                       </div>
                     </form>
@@ -844,18 +829,9 @@ export default function SettingsPage() {
                           type="submit"
                           disabled={isSubmitting}
                           className="gap-2 shadow-none"
+                          isLoading={isSubmitting}
                         >
-                          {isSubmitting ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              Saving...
-                            </>
-                          ) : (
-                            <>
-                              <Save className="h-4 w-4" />
-                              Save Changes
-                            </>
-                          )}
+                          {isSubmitting ? "Saving..." : "Save Changes"}
                         </Button>
                       </div>
                     </form>
@@ -1035,15 +1011,9 @@ export default function SettingsPage() {
                 }
                 disabled={isSubmitting}
                 className="gap-2 shadow-none"
+                isLoading={isSubmitting}
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  "Create Invitation"
-                )}
+                {isSubmitting ? "Creating..." : "Create Invitation"}
               </Button>
             )}
           </div>
@@ -1156,15 +1126,9 @@ export default function SettingsPage() {
               onClick={() => updateRoleForm.handleSubmit(onUpdateRoleSubmit)()}
               disabled={isSubmitting}
               className="gap-2 shadow-none"
+              isLoading={isSubmitting}
             >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                "Update Role"
-              )}
+              {isSubmitting ? "Updating..." : "Update Role"}
             </Button>
           </div>
         }
